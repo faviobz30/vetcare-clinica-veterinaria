@@ -8,12 +8,12 @@ import java.time.LocalDateTime;
 @Data
 public class CitaResponse {
 
-    private Integer idCita;
+    private Long idCita;
 
-    private Integer idVeterinario;
+    private Long idVeterinario;
 
     // PROVISIONAL
-    private Integer idMascota;
+    private Long idMascota;
 
     private LocalDateTime fechaCita;
 

@@ -10,7 +10,7 @@ public class CreateVeterinarioRequest {
 
     // PROVISIONAL
     @NotNull(message = "El usuario es obligatorio")
-    private Integer idUsuario;
+    private Long idUsuario;
 
     @NotBlank(message = "La especialidad es obligatoria")
     @Size(max = 100)

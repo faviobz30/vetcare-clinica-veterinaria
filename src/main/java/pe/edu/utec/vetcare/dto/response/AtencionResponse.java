@@ -8,14 +8,14 @@ import java.time.LocalDateTime;
 @Data
 public class AtencionResponse {
 
-    private Integer idAtencion;
+    private Long idAtencion;
 
     // PROVISIONAL
-    private Integer idHistoria;
+    private Long idHistoria;
 
-    private Integer idVeterinario;
+    private Long idVeterinario;
 
-    private Integer idCita;
+    private Long idCita;
 
     private LocalDateTime fechaAtencion;
 
