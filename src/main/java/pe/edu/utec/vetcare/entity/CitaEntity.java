@@ -6,9 +6,10 @@ import pe.edu.utec.vetcare.enums.EstadoCita;
 
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
-@Data
+@AllArgsConstructor
 @Entity
 @Table(name = "cita")
 public class CitaEntity {
@@ -25,15 +26,12 @@ public class CitaEntity {
     )
     private VeterinarioEntity veterinario;
 
-    /*@ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "id_mascota",
             nullable = false
     )
-    private MascotaEntity mascota;*/
-
-    @Column(name = "id_mascota", nullable = false)
-    private Long idMascota;
+    private MascotaEntity mascota;
 
     @Column(name = "fecha_cita", nullable = false)
     private LocalDateTime fechaCita;

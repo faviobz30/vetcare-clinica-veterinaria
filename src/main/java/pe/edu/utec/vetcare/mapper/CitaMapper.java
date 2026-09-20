@@ -13,16 +13,26 @@ public interface CitaMapper {
 
     @Mapping(target = "idCita", ignore = true)
     @Mapping(target = "veterinario", ignore = true)
+    @Mapping(target = "mascota", ignore = true)
     @Mapping(target = "estado", ignore = true)
     CitaEntity toEntity(CreateCitaRequest request);
 
-    @Mapping(source = "veterinario.idVeterinario",
-            target = "idVeterinario")
+    @Mapping(
+            source = "veterinario.idVeterinario",
+            target = "idVeterinario"
+    )
+    @Mapping(
+            source = "mascota.idMascota",
+            target = "idMascota"
+    )
     CitaResponse toResponse(CitaEntity entity);
 
     @Mapping(target = "idCita", ignore = true)
     @Mapping(target = "veterinario", ignore = true)
-    @Mapping(target = "idMascota", ignore = true)
+    @Mapping(target = "mascota", ignore = true)
     @Mapping(target = "estado", ignore = true)
-    void updateEntity(UpdateCitaRequest request, @MappingTarget CitaEntity entity);
+    void updateEntity(
+            UpdateCitaRequest request,
+            @MappingTarget CitaEntity entity
+    );
 }

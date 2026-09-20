@@ -3,9 +3,10 @@ package pe.edu.utec.vetcare.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
-@Data
+@AllArgsConstructor
 @Entity
 @Table(name = "veterinario")
 public class VeterinarioEntity {
@@ -15,16 +16,13 @@ public class VeterinarioEntity {
     @Column(name = "id_veterinario")
     private Long idVeterinario;
 
-    /*@OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "id_usuario",
             nullable = false,
             unique = true
     )
-    private UsuarioEntity usuario;*/
-
-    @Column(name = "id_usuario", nullable = false)
-    private Long idUsuario;
+    private UsuarioEntity usuario;
 
     @Column(name = "especialidad")
     private String especialidad;

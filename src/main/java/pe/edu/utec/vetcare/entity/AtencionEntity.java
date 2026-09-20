@@ -6,9 +6,10 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
-@Data
+@AllArgsConstructor
 @Entity
 @Table(name = "atenciones")
 public class AtencionEntity {
@@ -18,16 +19,12 @@ public class AtencionEntity {
     @Column(name = "id_atencion")
     private Long idAtencion;
 
-    /*@ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "id_historia",
             nullable = false
     )
-    private HistoriaClinicaEntity historiaClinica;*/
-
-    // PROVISIONAL
-    @Column(name = "id_historia", nullable = false)
-    private Long idHistoria;
+    private HistoriaClinicaEntity historiaClinica;
 
     @ManyToOne
     @JoinColumn(name = "id_veterinario_atencion", nullable = false)
