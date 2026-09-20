@@ -43,7 +43,7 @@ public class CitaServiceImpl implements CitaService {
     }
 
     @Override
-    public CitaResponse getById(Integer id) {
+    public CitaResponse getById(Long id) {
         CitaEntity entity = citaRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Cita no encontrada"));
@@ -81,7 +81,7 @@ public class CitaServiceImpl implements CitaService {
 
     @Override
     public CitaResponse update(
-            Integer id,
+            Long id,
             UpdateCitaRequest request) {
 
         CitaEntity entity = citaRepository.findById(id)
@@ -108,14 +108,14 @@ public class CitaServiceImpl implements CitaService {
     }
 
     @Override
-    public void delete(Integer id) {
+    public void delete(Long id) {
         CitaEntity entity = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
         citaRepository.delete(entity);
     }
 
     @Override
-    public CitaResponse confirm(Integer id) {
+    public CitaResponse confirm(Long id) {
 
         CitaEntity entity = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
@@ -132,7 +132,7 @@ public class CitaServiceImpl implements CitaService {
     }
 
     @Override
-    public CitaResponse cancel(Integer id) {
+    public CitaResponse cancel(Long id) {
 
         CitaEntity entity = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
@@ -150,7 +150,7 @@ public class CitaServiceImpl implements CitaService {
     }
 
     @Override
-    public CitaResponse attend(Integer id) {
+    public CitaResponse attend(Long id) {
 
         CitaEntity entity = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada"));

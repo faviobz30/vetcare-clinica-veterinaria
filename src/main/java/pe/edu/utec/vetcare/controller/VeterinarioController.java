@@ -26,7 +26,7 @@ public class VeterinarioController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<VeterinarioResponse> getById(@PathVariable Integer id) {
+    public ResponseEntity<VeterinarioResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(veterinarioService.getById(id));
     }
 
@@ -38,7 +38,7 @@ public class VeterinarioController {
 
     @PutMapping("/{id}")
     public ResponseEntity<VeterinarioResponse> update(
-            @PathVariable Integer id,
+            @PathVariable Long id,
             @Valid
             @RequestBody
             UpdateVeterinarioRequest request) {
@@ -48,7 +48,7 @@ public class VeterinarioController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         veterinarioService.delete(id);
         return ResponseEntity.noContent().build();
     }

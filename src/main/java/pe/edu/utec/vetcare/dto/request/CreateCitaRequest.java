@@ -12,11 +12,11 @@ import java.time.LocalDateTime;
 public class CreateCitaRequest {
 
     @NotNull(message = "El veterinario es obligatorio")
-    private Integer idVeterinario;
+    private Long idVeterinario;
 
     // PROVISIONAL
     @NotNull(message = "La mascota es obligatoria")
-    private Integer idMascota;
+    private Long idMascota;
 
     @NotNull(message = "La fecha de la cita es obligatoria")
     @Future(message = "La fecha de la cita debe ser futura")

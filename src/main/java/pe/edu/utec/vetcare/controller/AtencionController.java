@@ -27,7 +27,7 @@ public class AtencionController {
 
     @GetMapping("/{id}")
     public ResponseEntity<AtencionResponse> getById(
-            @PathVariable Integer id
+            @PathVariable Long id
     ) {
         return ResponseEntity.ok(atencionService.getById(id));
     }
@@ -41,7 +41,7 @@ public class AtencionController {
 
     @PutMapping("/{id}")
     public ResponseEntity<AtencionResponse> update(
-            @PathVariable Integer id,
+            @PathVariable Long id,
             @Valid @RequestBody UpdateAtencionRequest request
     ) {
         return ResponseEntity.ok(atencionService.update(id, request));
@@ -49,7 +49,7 @@ public class AtencionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @PathVariable Integer id
+            @PathVariable Long id
     ) {
         atencionService.delete(id);
         return ResponseEntity.noContent().build();

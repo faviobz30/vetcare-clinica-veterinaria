@@ -14,13 +14,13 @@ public class CreateAtencionRequest {
 
     // PROVISIONAL
     @NotNull(message = "La historia clínica es obligatoria")
-    private Integer idHistoria;
+    private Long idHistoria;
 
     @NotNull(message = "El veterinario es obligatorio")
-    private Integer idVeterinario;
+    private Long idVeterinario;
 
     @NotNull(message = "La cita es obligatoria")
-    private Integer idCita;
+    private Long idCita;
 
     @NotNull(message = "El precio de atención es obligatorio")
     @DecimalMin(value = "0.0", inclusive = false,

@@ -10,14 +10,14 @@ public interface VeterinarioService {
 
     List<VeterinarioResponse> getAll();
 
-    VeterinarioResponse getById(Integer id);
+    VeterinarioResponse getById(Long id);
 
     VeterinarioResponse create(CreateVeterinarioRequest request);
 
     VeterinarioResponse update(
-            Integer id,
+            Long id,
             UpdateVeterinarioRequest request
     );
 
-    void delete(Integer id);
+    void delete(Long id);
 }

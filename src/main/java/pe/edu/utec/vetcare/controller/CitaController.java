@@ -26,7 +26,7 @@ public class CitaController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CitaResponse> getById(@PathVariable Integer id) {
+    public ResponseEntity<CitaResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.getById(id));
     }
 
@@ -36,29 +36,29 @@ public class CitaController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CitaResponse> update(@PathVariable Integer id,
+    public ResponseEntity<CitaResponse> update(@PathVariable Long id,
             @Valid @RequestBody UpdateCitaRequest request) {
         return ResponseEntity.ok(citaService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         citaService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}/confirmar")
-    public ResponseEntity<CitaResponse> confirm(@PathVariable Integer id) {
+    public ResponseEntity<CitaResponse> confirm(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.confirm(id));
     }
 
     @PutMapping("/{id}/cancelar")
-    public ResponseEntity<CitaResponse> cancel(@PathVariable Integer id) {
+    public ResponseEntity<CitaResponse> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.cancel(id));
     }
 
     @PutMapping("/{id}/atender")
-    public ResponseEntity<CitaResponse> attend(@PathVariable Integer id) {
+    public ResponseEntity<CitaResponse> attend(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.attend(id));
     }
 }

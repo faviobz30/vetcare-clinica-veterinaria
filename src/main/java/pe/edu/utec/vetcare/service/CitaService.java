@@ -10,17 +10,17 @@ public interface CitaService {
 
     List<CitaResponse> getAll();
 
-    CitaResponse getById(Integer id);
+    CitaResponse getById(Long id);
 
     CitaResponse create(CreateCitaRequest request);
 
-    CitaResponse update(Integer id, UpdateCitaRequest request);
+    CitaResponse update(Long id, UpdateCitaRequest request);
 
-    void delete(Integer id);
+    void delete(Long id);
 
-    CitaResponse confirm(Integer id);
+    CitaResponse confirm(Long id);
 
-    CitaResponse cancel(Integer id);
+    CitaResponse cancel(Long id);
 
-    CitaResponse attend(Integer id);
+    CitaResponse attend(Long id);
 }

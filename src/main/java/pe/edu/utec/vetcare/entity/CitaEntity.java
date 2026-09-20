@@ -16,23 +16,24 @@ public class CitaEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_cita")
-    private Integer idCita;
+    private Long idCita;
 
-    @ManyToOne
-    @JoinColumn(name = "id_veterinario", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_veterinario",
+            nullable = false
+    )
     private VeterinarioEntity veterinario;
 
+    /*@ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_mascota",
+            nullable = false
+    )
+    private MascotaEntity mascota;*/
 
-    /*
-    @ManyToOne
-    @JoinColumn(name = "id_mascota")
-    private MascotaEntity mascota;
-    */
-
-    // PROVISIONAL
     @Column(name = "id_mascota", nullable = false)
-    private Integer idMascota;
-
+    private Long idMascota;
 
     @Column(name = "fecha_cita", nullable = false)
     private LocalDateTime fechaCita;

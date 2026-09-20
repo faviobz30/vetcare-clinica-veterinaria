@@ -35,7 +35,7 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     }
 
     @Override
-    public VeterinarioResponse getById(Integer id) {
+    public VeterinarioResponse getById(Long id) {
 
         VeterinarioEntity entity = veterinarioRepository.findById(id)
                 .orElseThrow(
@@ -60,7 +60,7 @@ public class VeterinarioServiceImpl implements VeterinarioService {
 
     @Override
     public VeterinarioResponse update(
-            Integer id,
+            Long id,
             UpdateVeterinarioRequest request) {
 
         VeterinarioEntity entity =
@@ -80,7 +80,7 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     }
 
     @Override
-    public void delete(Integer id) {
+    public void delete(Long id) {
 
         VeterinarioEntity entity =
                 veterinarioRepository.findById(id)

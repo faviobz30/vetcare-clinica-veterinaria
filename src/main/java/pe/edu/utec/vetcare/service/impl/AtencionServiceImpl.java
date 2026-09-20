@@ -48,7 +48,7 @@ public class AtencionServiceImpl implements AtencionService {
     }
 
     @Override
-    public AtencionResponse getById(Integer id) {
+    public AtencionResponse getById(Long id) {
         AtencionEntity entity = atencionRepository.findById(id)
                 .orElseThrow(() -> new AtencionNoEncontradaException("Atención no encontrada"));
         return atencionMapper.toResponse(entity);
@@ -76,7 +76,7 @@ public class AtencionServiceImpl implements AtencionService {
         AtencionEntity entity = new AtencionEntity();
 
         entity.setIdHistoria(request.getIdHistoria());
-        entity.setVeterinario(veterinario);
+        entity.setVeterinarioAtencion(veterinario);
         entity.setCita(cita);
         entity.setFechaAtencion(LocalDateTime.now());
         entity.setPrecioAtencion(request.getPrecioAtencion());
@@ -93,7 +93,7 @@ public class AtencionServiceImpl implements AtencionService {
 
     @Override
     public AtencionResponse update(
-            Integer id,
+            Long id,
             UpdateAtencionRequest request) {
         AtencionEntity entity = atencionRepository.findById(id)
                 .orElseThrow(() -> new AtencionNoEncontradaException("Atención no encontrada"));
@@ -104,7 +104,7 @@ public class AtencionServiceImpl implements AtencionService {
     }
 
     @Override
-    public void delete(Integer id) {
+    public void delete(Long id) {
         AtencionEntity entity = atencionRepository.findById(id)
                 .orElseThrow(() -> new AtencionNoEncontradaException("Atención no encontrada"));
 

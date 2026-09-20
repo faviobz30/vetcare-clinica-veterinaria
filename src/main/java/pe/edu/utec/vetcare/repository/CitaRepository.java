@@ -7,8 +7,7 @@ import pe.edu.utec.vetcare.entity.CitaEntity;
 
 import java.time.LocalDateTime;
 
-public interface CitaRepository
-        extends JpaRepository<CitaEntity, Integer> {
+public interface CitaRepository extends JpaRepository<CitaEntity, Long> {
 
     @Query("""
         SELECT COUNT(c) > 0
@@ -18,7 +17,7 @@ public interface CitaRepository
         AND c.fechaCita > :inicioComparacion
     """)
     boolean existsCitaSuperpuesta(
-            @Param("idVeterinario") Integer idVeterinario,
+            @Param("idVeterinario") Long idVeterinario,
             @Param("inicioComparacion") LocalDateTime inicioComparacion,
             @Param("finNuevaCita") LocalDateTime finNuevaCita
     );

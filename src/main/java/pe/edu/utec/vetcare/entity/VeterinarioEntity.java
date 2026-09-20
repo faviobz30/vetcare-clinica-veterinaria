@@ -10,19 +10,21 @@ import lombok.*;
 @Table(name = "veterinario")
 public class VeterinarioEntity {
 
-    /*@OneToOne
-    @JoinColumn(name = "id_usuario")
-    private UsuarioEntity usuario;
-    */
-
-    // PROVISIONAL
-    @Column(name = "id_usuario")
-    private Integer idUsuario;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_veterinario")
-    private Integer idVeterinario;
+    private Long idVeterinario;
+
+    /*@OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_usuario",
+            nullable = false,
+            unique = true
+    )
+    private UsuarioEntity usuario;*/
+
+    @Column(name = "id_usuario", nullable = false)
+    private Long idUsuario;
 
     @Column(name = "especialidad")
     private String especialidad;

@@ -10,11 +10,11 @@ public interface AtencionService {
 
     List<AtencionResponse> getAll();
 
-    AtencionResponse getById(Integer id);
+    AtencionResponse getById(Long id);
 
     AtencionResponse create(CreateAtencionRequest request);
 
-    AtencionResponse update(Integer id, UpdateAtencionRequest request);
+    AtencionResponse update(Long id, UpdateAtencionRequest request);
 
-    void delete(Integer id);
+    void delete(Long id);
 }

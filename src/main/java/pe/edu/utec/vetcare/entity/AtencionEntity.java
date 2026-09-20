@@ -16,22 +16,22 @@ public class AtencionEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_atencion")
-    private Integer idAtencion;
+    private Long idAtencion;
 
-    /*
-    @ManyToOne
-    @JoinColumn(name = "id_historia", nullable = false)
-    private HistoriaClinicaEntity historiaClinica;
-    */
+    /*@ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_historia",
+            nullable = false
+    )
+    private HistoriaClinicaEntity historiaClinica;*/
 
     // PROVISIONAL
     @Column(name = "id_historia", nullable = false)
-    private Integer idHistoria;
-
+    private Long idHistoria;
 
     @ManyToOne
     @JoinColumn(name = "id_veterinario_atencion", nullable = false)
-    private VeterinarioEntity veterinario;
+    private VeterinarioEntity veterinarioAtencion;
 
 
     @OneToOne
