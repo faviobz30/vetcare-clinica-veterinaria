@@ -14,7 +14,7 @@ public class CreateCitaRequest {
     @NotNull(message = "El veterinario es obligatorio")
     private Long idVeterinario;
 
-    // PROVISIONAL
+
     @NotNull(message = "La mascota es obligatoria")
     private Long idMascota;
 

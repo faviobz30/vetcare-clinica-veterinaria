@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 @Data
 public class CreateAtencionRequest {
 
-    // PROVISIONAL
+
     @NotNull(message = "La historia clínica es obligatoria")
     private Long idHistoria;
 

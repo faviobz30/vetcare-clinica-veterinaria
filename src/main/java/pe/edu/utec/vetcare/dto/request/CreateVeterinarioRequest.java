@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class CreateVeterinarioRequest {
 
-    // PROVISIONAL
+
     @NotNull(message = "El usuario es obligatorio")
     private Long idUsuario;
 

@@ -4,8 +4,10 @@ import org.springframework.stereotype.Service;
 import pe.edu.utec.vetcare.dto.request.CreateVeterinarioRequest;
 import pe.edu.utec.vetcare.dto.request.UpdateVeterinarioRequest;
 import pe.edu.utec.vetcare.dto.response.VeterinarioResponse;
+import pe.edu.utec.vetcare.entity.UsuarioEntity;
 import pe.edu.utec.vetcare.entity.VeterinarioEntity;
 import pe.edu.utec.vetcare.mapper.VeterinarioMapper;
+import pe.edu.utec.vetcare.repository.UsuarioRepository;
 import pe.edu.utec.vetcare.repository.VeterinarioRepository;
 import pe.edu.utec.vetcare.service.VeterinarioService;
 
@@ -15,13 +17,16 @@ import java.util.List;
 public class VeterinarioServiceImpl implements VeterinarioService {
 
     private final VeterinarioRepository veterinarioRepository;
+    private final UsuarioRepository usuarioRepository;
     private final VeterinarioMapper veterinarioMapper;
 
     public VeterinarioServiceImpl(
             VeterinarioRepository veterinarioRepository,
+            UsuarioRepository usuarioRepository,
             VeterinarioMapper veterinarioMapper) {
 
         this.veterinarioRepository = veterinarioRepository;
+        this.usuarioRepository = usuarioRepository;
         this.veterinarioMapper = veterinarioMapper;
     }
 
@@ -37,10 +42,13 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     @Override
     public VeterinarioResponse getById(Long id) {
 
-        VeterinarioEntity entity = veterinarioRepository.findById(id)
-                .orElseThrow(
-                        () -> new RuntimeException("Veterinario no encontrado")
-                );
+        VeterinarioEntity entity =
+                veterinarioRepository.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Veterinario no encontrado"
+                                )
+                        );
 
         return veterinarioMapper.toResponse(entity);
     }
@@ -49,8 +57,20 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     public VeterinarioResponse create(
             CreateVeterinarioRequest request) {
 
+        UsuarioEntity usuario =
+                usuarioRepository.findById(
+                                request.getIdUsuario()
+                        )
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Usuario no encontrado"
+                                )
+                        );
+
         VeterinarioEntity entity =
                 veterinarioMapper.toEntity(request);
+
+        entity.setUsuario(usuario);
 
         VeterinarioEntity savedEntity =
                 veterinarioRepository.save(entity);
@@ -65,13 +85,16 @@ public class VeterinarioServiceImpl implements VeterinarioService {
 
         VeterinarioEntity entity =
                 veterinarioRepository.findById(id)
-                        .orElseThrow(
-                                () -> new RuntimeException(
+                        .orElseThrow(() ->
+                                new RuntimeException(
                                         "Veterinario no encontrado"
                                 )
                         );
 
-        veterinarioMapper.updateEntity(request, entity);
+        veterinarioMapper.updateEntity(
+                request,
+                entity
+        );
 
         VeterinarioEntity updatedEntity =
                 veterinarioRepository.save(entity);
@@ -84,13 +107,12 @@ public class VeterinarioServiceImpl implements VeterinarioService {
 
         VeterinarioEntity entity =
                 veterinarioRepository.findById(id)
-                        .orElseThrow(
-                                () -> new RuntimeException(
+                        .orElseThrow(() ->
+                                new RuntimeException(
                                         "Veterinario no encontrado"
                                 )
                         );
 
         veterinarioRepository.delete(entity);
     }
-
 }
