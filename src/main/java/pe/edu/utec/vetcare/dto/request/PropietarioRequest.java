@@ -1,5 +1,6 @@
 package pe.edu.utec.vetcare.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -10,6 +11,7 @@ public class PropietarioRequest {
     @NotNull(message = "El usuario es obligatorio")
     private Long idUsuario;
 
-    @Size(max = 200)
+    @NotBlank(message = "La dirección es obligatoria")
+    @Size(max = 200, message = "La dirección no debe superar los 200 caracteres")
     private String direccion;
 }

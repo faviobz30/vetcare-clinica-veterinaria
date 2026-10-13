@@ -28,30 +28,16 @@ public class MascotaEntity {
     )
     private PropietarioEntity propietario;
 
-    @Column(
-            name = "nombre",
-            nullable = false,
-            length = 100
-    )
+    @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;
 
-    @Column(
-            name = "especie",
-            nullable = false,
-            length = 50
-    )
+    @Column(name = "especie", nullable = false, length = 50)
     private String especie;
 
-    @Column(
-            name = "raza",
-            length = 100
-    )
+    @Column(name = "raza", length = 100)
     private String raza;
 
-    @Column(
-            name = "sexo",
-            length = 10
-    )
+    @Column(name = "sexo", length = 10)
     private String sexo;
 
     @Column(name = "fecha_nacimiento")

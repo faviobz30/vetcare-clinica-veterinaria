@@ -19,15 +19,11 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class MascotaServiceImpl
-        implements MascotaService {
+public class MascotaServiceImpl implements MascotaService {
 
     private final MascotaRepository mascotaRepository;
-
     private final PropietarioRepository propietarioRepository;
-
     private final HistoriaClinicaRepository historiaClinicaRepository;
-
     private final MascotaMapper mascotaMapper;
 
     @Override
@@ -43,74 +39,45 @@ public class MascotaServiceImpl
     @Override
     @Transactional(readOnly = true)
     public MascotaResponse obtener(Long id) {
-
-        return mascotaMapper.toResponse(
-                buscarMascota(id)
-        );
+        return mascotaMapper.toResponse(buscarMascota(id));
     }
 
     @Override
     @Transactional
-    public MascotaResponse crear(
-            MascotaRequest request
-    ) {
+    public MascotaResponse crear(MascotaRequest request) {
 
-        PropietarioEntity propietario =
-                propietarioRepository
-                        .findById(
-                                request.getIdPropietario()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Propietario no encontrado"
-                                )
-                        );
+        PropietarioEntity propietario = propietarioRepository
+                        .findById(request.getIdPropietario())
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                        "Propietario no encontrado"));
 
-        MascotaEntity mascota =
-                mascotaMapper.toEntity(request);
+        MascotaEntity mascota = mascotaMapper.toEntity(request);
 
         mascota.setPropietario(propietario);
 
-        MascotaEntity mascotaGuardada =
-                mascotaRepository.save(mascota);
+        MascotaEntity mascotaGuardada = mascotaRepository.save(mascota);
 
-        HistoriaClinicaEntity historia =
-                new HistoriaClinicaEntity();
+        HistoriaClinicaEntity historia = new HistoriaClinicaEntity();
 
         historia.setMascota(mascotaGuardada);
 
         historiaClinicaRepository.save(historia);
 
-        return mascotaMapper.toResponse(
-                mascotaGuardada
-        );
+        return mascotaMapper.toResponse(mascotaGuardada);
     }
 
     @Override
     @Transactional
-    public MascotaResponse actualizar(
-            Long id,
-            MascotaRequest request
-    ) {
+    public MascotaResponse actualizar(Long id, MascotaRequest request) {
 
-        MascotaEntity mascota =
-                buscarMascota(id);
+        MascotaEntity mascota = buscarMascota(id);
 
-        PropietarioEntity propietario =
-                propietarioRepository
-                        .findById(
-                                request.getIdPropietario()
-                        )
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "Propietario no encontrado"
-                                )
-                        );
+        PropietarioEntity propietario = propietarioRepository
+                        .findById(request.getIdPropietario())
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                        "Propietario no encontrado"));
 
-        mascotaMapper.updateEntity(
-                request,
-                mascota
-        );
+        mascotaMapper.updateEntity(request, mascota);
 
         mascota.setPropietario(propietario);
 
@@ -123,9 +90,7 @@ public class MascotaServiceImpl
     @Transactional
     public void eliminar(Long id) {
 
-        MascotaEntity mascota =
-                buscarMascota(id);
-
+        MascotaEntity mascota = buscarMascota(id);
         mascotaRepository.delete(mascota);
     }
 
@@ -146,10 +111,6 @@ public class MascotaServiceImpl
     private MascotaEntity buscarMascota(Long id) {
 
         return mascotaRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Mascota no encontrada"
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Mascota no encontrada"));
     }
 }

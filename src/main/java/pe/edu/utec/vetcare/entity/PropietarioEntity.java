@@ -32,6 +32,7 @@ public class PropietarioEntity {
 
     @Column(
             name = "direccion",
+            nullable = false,
             length = 200
     )
     private String direccion;

@@ -1,14 +1,18 @@
+
 package pe.edu.utec.vetcare.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+
 import pe.edu.utec.vetcare.dto.request.UpdateAtencionRequest;
 import pe.edu.utec.vetcare.dto.response.AtencionResponse;
 import pe.edu.utec.vetcare.entity.AtencionEntity;
 
 @Mapper(componentModel = "spring")
 public interface AtencionMapper {
+
+    // Convertir AtencionEntity a AtencionResponse
 
     @Mapping(
             source = "historiaClinica.idHistoria",
@@ -24,6 +28,13 @@ public interface AtencionMapper {
     )
     AtencionResponse toResponse(AtencionEntity entity);
 
+    // Actualizar únicamente los datos clínicos permitidos
+
+    @Mapping(target = "idAtencion", ignore = true)
+    @Mapping(target = "historiaClinica", ignore = true)
+    @Mapping(target = "veterinarioAtencion", ignore = true)
+    @Mapping(target = "cita", ignore = true)
+    @Mapping(target = "fechaAtencion", ignore = true)
     void updateEntity(
             UpdateAtencionRequest request,
             @MappingTarget AtencionEntity entity

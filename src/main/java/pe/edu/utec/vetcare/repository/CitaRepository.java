@@ -21,4 +21,25 @@ public interface CitaRepository extends JpaRepository<CitaEntity, Long> {
             @Param("inicioComparacion") LocalDateTime inicioComparacion,
             @Param("finNuevaCita") LocalDateTime finNuevaCita
     );
+
+    @Query("""
+        SELECT COUNT(c) > 0
+        FROM CitaEntity c
+        WHERE c.veterinario.idVeterinario = :idVeterinario
+        AND c.idCita <> :idCita
+        AND c.fechaCita < :finNuevaCita
+        AND c.fechaCita > :inicioComparacion
+    """)
+    boolean existsCitaSuperpuestaExcluyendoCita(
+            @Param("idVeterinario") Long idVeterinario,
+            @Param("idCita") Long idCita,
+            @Param("inicioComparacion") LocalDateTime inicioComparacion,
+            @Param("finNuevaCita") LocalDateTime finNuevaCita
+    );
+
+    boolean existsByVeterinario_Usuario_CorreoIgnoreCaseAndMascota_IdMascota(
+            String correo,
+            Long idMascota
+    );
+
 }

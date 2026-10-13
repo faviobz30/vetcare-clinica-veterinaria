@@ -19,39 +19,22 @@ public class MascotaController {
 
     @GetMapping
     public List<MascotaResponse> listar() {
-
         return mascotaService.listar();
     }
 
     @GetMapping("/{id}")
-    public MascotaResponse obtener(
-            @PathVariable Long id
-    ) {
-
+    public MascotaResponse obtener(@PathVariable Long id) {
         return mascotaService.obtener(id);
     }
 
-    @GetMapping(
-            "/propietario/{idPropietario}"
-    )
-    public List<MascotaResponse>
-    listarPorPropietario(
-            @PathVariable Long idPropietario
-    ) {
-
-        return mascotaService
-                .listarPorPropietario(
-                        idPropietario
-                );
+    @GetMapping("/propietario/{idPropietario}")
+    public List<MascotaResponse> listarPorPropietario(@PathVariable Long idPropietario) {
+        return mascotaService.listarPorPropietario(idPropietario);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public MascotaResponse crear(
-            @Valid
-            @RequestBody MascotaRequest request
-    ) {
-
+    public MascotaResponse crear(@Valid @RequestBody MascotaRequest request) {
         return mascotaService.crear(request);
     }
 
@@ -62,17 +45,12 @@ public class MascotaController {
             @RequestBody MascotaRequest request
     ) {
 
-        return mascotaService.actualizar(
-                id,
-                request
-        );
+        return mascotaService.actualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void eliminar(
-            @PathVariable Long id
-    ) {
+    public void eliminar(@PathVariable Long id) {
 
         mascotaService.eliminar(id);
     }

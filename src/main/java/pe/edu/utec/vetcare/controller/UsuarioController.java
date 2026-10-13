@@ -4,7 +4,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import pe.edu.utec.vetcare.dto.request.UsuarioRequest;
+import pe.edu.utec.vetcare.dto.request.ChangePasswordRequest;
+import pe.edu.utec.vetcare.dto.request.CreateUsuarioRequest;
+import pe.edu.utec.vetcare.dto.request.UpdateMyProfileRequest;
+import pe.edu.utec.vetcare.dto.request.UpdateUsuarioRequest;
 import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
 import pe.edu.utec.vetcare.service.UsuarioService;
 
@@ -19,7 +22,6 @@ public class UsuarioController {
 
     @GetMapping
     public List<UsuarioResponse> listar() {
-
         return usuarioService.listar();
     }
 
@@ -27,7 +29,6 @@ public class UsuarioController {
     public UsuarioResponse obtener(
             @PathVariable Long id
     ) {
-
         return usuarioService.obtener(id);
     }
 
@@ -35,9 +36,8 @@ public class UsuarioController {
     @ResponseStatus(HttpStatus.CREATED)
     public UsuarioResponse crear(
             @Valid
-            @RequestBody UsuarioRequest request
+            @RequestBody CreateUsuarioRequest request
     ) {
-
         return usuarioService.crear(request);
     }
 
@@ -45,13 +45,33 @@ public class UsuarioController {
     public UsuarioResponse actualizar(
             @PathVariable Long id,
             @Valid
-            @RequestBody UsuarioRequest request
+            @RequestBody UpdateUsuarioRequest request
     ) {
-
         return usuarioService.actualizar(
                 id,
                 request
         );
+    }
+
+    @PutMapping("/{id}/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cambiarContrasena(
+            @PathVariable Long id,
+            @Valid
+            @RequestBody ChangePasswordRequest request
+    ) {
+        usuarioService.cambiarContrasena(
+                id,
+                request
+        );
+    }
+
+    @PutMapping("/me")
+    public UsuarioResponse actualizarMiPerfil(
+            @Valid
+            @RequestBody UpdateMyProfileRequest request
+    ) {
+        return usuarioService.actualizarMiPerfil(request);
     }
 
     @DeleteMapping("/{id}")
@@ -59,7 +79,6 @@ public class UsuarioController {
     public void eliminar(
             @PathVariable Long id
     ) {
-
         usuarioService.eliminar(id);
     }
 }

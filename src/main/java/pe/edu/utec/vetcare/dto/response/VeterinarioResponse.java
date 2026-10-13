@@ -6,7 +6,7 @@ import lombok.Data;
 public class VeterinarioResponse {
 
     private Long idVeterinario;
-    private Long idUsuario; // PROVISIONAL
+    private Long idUsuario;
     private String especialidad;
     private String nroColegiatura;
 }

@@ -67,11 +67,12 @@ public class UsuarioEntity {
 
     @Column(
             name = "nro_celular",
+            nullable = false,
             length = 20
     )
     private String nroCelular;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(
             name = "id_rol",
             nullable = false

@@ -8,6 +8,5 @@ import java.util.Optional;
 public interface HistoriaClinicaRepository
         extends JpaRepository<HistoriaClinicaEntity, Long> {
 
-    Optional<HistoriaClinicaEntity>
-    findByMascotaIdMascota(Long idMascota);
+    Optional<HistoriaClinicaEntity> findByMascotaIdMascota(Long idMascota);
 }

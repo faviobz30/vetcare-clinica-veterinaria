@@ -10,7 +10,6 @@ public class AtencionResponse {
 
     private Long idAtencion;
 
-    // PROVISIONAL
     private Long idHistoria;
 
     private Long idVeterinario;
