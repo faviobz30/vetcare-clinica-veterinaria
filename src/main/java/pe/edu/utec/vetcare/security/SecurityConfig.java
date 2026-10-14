@@ -57,7 +57,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // 1. ENDPOINTS PÚBLICOS
-                        .requestMatchers("/api/auth/**", "/actuator/health").permitAll()
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/actuator/health",
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
 
                         // 2. PERFIL PROPIO
                         .requestMatchers(HttpMethod.PUT, "/api/usuarios/me").hasAnyAuthority(
