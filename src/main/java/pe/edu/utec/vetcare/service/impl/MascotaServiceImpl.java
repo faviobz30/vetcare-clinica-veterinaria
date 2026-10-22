@@ -3,6 +3,10 @@ package pe.edu.utec.vetcare.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
+import pe.edu.utec.vetcare.security.AccesoClinico;
+import pe.edu.utec.vetcare.repository.CitaRepository;
+import pe.edu.utec.vetcare.exception.BadRequestException;
 import pe.edu.utec.vetcare.dto.request.MascotaRequest;
 import pe.edu.utec.vetcare.dto.response.MascotaResponse;
 import pe.edu.utec.vetcare.entity.HistoriaClinicaEntity;
@@ -23,6 +27,7 @@ public class MascotaServiceImpl
         implements MascotaService {
 
     private final MascotaRepository mascotaRepository;
+    private final CitaRepository citaRepository;
 
     private final PropietarioRepository propietarioRepository;
 
@@ -34,8 +39,12 @@ public class MascotaServiceImpl
     @Transactional(readOnly = true)
     public List<MascotaResponse> listar() {
 
-        return mascotaRepository.findAll()
-                .stream()
+        List<MascotaEntity> mascotas;
+        if (AccesoClinico.es("ADMIN")) mascotas = mascotaRepository.findAll();
+        else if (AccesoClinico.es("PROPIETARIO")) mascotas = mascotaRepository.findByCorreoPropietario(AccesoClinico.correo());
+        else if (AccesoClinico.es("VETERINARIO")) mascotas = mascotaRepository.findPacientesDeVeterinario(AccesoClinico.correo());
+        else throw new AccessDeniedException("Acceso denegado");
+        return mascotas.stream()
                 .map(mascotaMapper::toResponse)
                 .toList();
     }
@@ -44,9 +53,9 @@ public class MascotaServiceImpl
     @Transactional(readOnly = true)
     public MascotaResponse obtener(Long id) {
 
-        return mascotaMapper.toResponse(
-                buscarMascota(id)
-        );
+        MascotaEntity mascota = buscarMascota(id);
+        comprobarLectura(mascota);
+        return mascotaMapper.toResponse(mascota);
     }
 
     @Override
@@ -65,6 +74,11 @@ public class MascotaServiceImpl
                                         "Propietario no encontrado"
                                 )
                         );
+
+        if (!AccesoClinico.es("ADMIN") && !(AccesoClinico.es("PROPIETARIO")
+                && propietario.getUsuario().getCorreo().equals(AccesoClinico.correo()))) {
+            throw new AccessDeniedException("Solo puede registrar sus propias mascotas");
+        }
 
         MascotaEntity mascota =
                 mascotaMapper.toEntity(request);
@@ -93,8 +107,11 @@ public class MascotaServiceImpl
             MascotaRequest request
     ) {
 
-        MascotaEntity mascota =
-                buscarMascota(id);
+        MascotaEntity mascota = buscarMascota(id);
+        comprobarEscritura(mascota);
+        if (!AccesoClinico.es("ADMIN") && !mascota.getPropietario().getIdPropietario().equals(request.getIdPropietario())) {
+            throw new AccessDeniedException("No puede transferir una mascota a otro propietario");
+        }
 
         PropietarioEntity propietario =
                 propietarioRepository
@@ -123,9 +140,14 @@ public class MascotaServiceImpl
     @Transactional
     public void eliminar(Long id) {
 
-        MascotaEntity mascota =
-                buscarMascota(id);
-
+        MascotaEntity mascota = buscarMascota(id);
+        comprobarEscritura(mascota);
+        if (citaRepository.existsByMascota_IdMascota(id)) {
+            throw new BadRequestException("No se puede eliminar una mascota con citas registradas");
+        }
+        if (historiaClinicaRepository.findByMascotaIdMascota(id).isPresent()) {
+            throw new BadRequestException("No se puede eliminar una mascota con historia clínica registrada");
+        }
         mascotaRepository.delete(mascota);
     }
 
@@ -134,6 +156,12 @@ public class MascotaServiceImpl
     public List<MascotaResponse>
     listarPorPropietario(Long idPropietario) {
 
+        if (!AccesoClinico.es("ADMIN")) {
+            if (!AccesoClinico.es("PROPIETARIO") || !propietarioRepository.findById(idPropietario)
+                    .map(pr -> pr.getUsuario().getCorreo().equals(AccesoClinico.correo())).orElse(false)) {
+                throw new AccessDeniedException("No puede consultar mascotas de otro propietario");
+            }
+        }
         return mascotaRepository
                 .findByPropietarioIdPropietario(
                         idPropietario
@@ -141,6 +169,18 @@ public class MascotaServiceImpl
                 .stream()
                 .map(mascotaMapper::toResponse)
                 .toList();
+    }
+
+    private void comprobarLectura(MascotaEntity mascota) {
+        if (AccesoClinico.es("ADMIN") || (AccesoClinico.es("PROPIETARIO") && AccesoClinico.esPropietario(mascota))
+                || (AccesoClinico.es("VETERINARIO") && citaRepository.existsByMascota_IdMascotaAndVeterinario_Usuario_Correo(
+                        mascota.getIdMascota(), AccesoClinico.correo()))) return;
+        throw new AccessDeniedException("No puede consultar esta mascota");
+    }
+
+    private void comprobarEscritura(MascotaEntity mascota) {
+        if (AccesoClinico.es("ADMIN") || (AccesoClinico.es("PROPIETARIO") && AccesoClinico.esPropietario(mascota))) return;
+        throw new AccessDeniedException("No puede modificar esta mascota");
     }
 
     private MascotaEntity buscarMascota(Long id) {

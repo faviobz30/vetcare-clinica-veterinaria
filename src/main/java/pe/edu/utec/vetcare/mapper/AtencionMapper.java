@@ -24,6 +24,11 @@ public interface AtencionMapper {
     )
     AtencionResponse toResponse(AtencionEntity entity);
 
+    @Mapping(target = "idAtencion", ignore = true)
+    @Mapping(target = "historiaClinica", ignore = true)
+    @Mapping(target = "veterinarioAtencion", ignore = true)
+    @Mapping(target = "cita", ignore = true)
+    @Mapping(target = "fechaAtencion", ignore = true)
     void updateEntity(
             UpdateAtencionRequest request,
             @MappingTarget AtencionEntity entity

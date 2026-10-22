@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.utec.vetcare.dto.request.UsuarioRequest;
+import pe.edu.utec.vetcare.dto.request.ActualizarUsuarioRequest;
 import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
 import pe.edu.utec.vetcare.service.UsuarioService;
 
@@ -45,7 +46,7 @@ public class UsuarioController {
     public UsuarioResponse actualizar(
             @PathVariable Long id,
             @Valid
-            @RequestBody UsuarioRequest request
+            @RequestBody ActualizarUsuarioRequest request
     ) {
 
         return usuarioService.actualizar(

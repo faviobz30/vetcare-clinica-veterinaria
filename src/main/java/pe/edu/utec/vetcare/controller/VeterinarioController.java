@@ -1,23 +1,37 @@
 package pe.edu.utec.vetcare.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
+import pe.edu.utec.vetcare.exception.BadRequestException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import pe.edu.utec.vetcare.dto.request.ActualizarPerfilVeterinarioRequest;
+import pe.edu.utec.vetcare.dto.response.PerfilVeterinarioResponse;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.utec.vetcare.dto.request.CreateVeterinarioRequest;
+import pe.edu.utec.vetcare.dto.request.RegistrarVeterinarioRequest;
 import pe.edu.utec.vetcare.dto.request.UpdateVeterinarioRequest;
 import pe.edu.utec.vetcare.dto.response.VeterinarioResponse;
 import pe.edu.utec.vetcare.service.VeterinarioService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/veterinarios")
 public class VeterinarioController {
 
     private final VeterinarioService veterinarioService;
+    private final Validator validator;
 
-    public VeterinarioController(VeterinarioService veterinarioService) {
+    public VeterinarioController(VeterinarioService veterinarioService,
+                                 Validator validator) {
         this.veterinarioService = veterinarioService;
+        this.validator = validator;
     }
 
     @GetMapping
@@ -25,15 +39,68 @@ public class VeterinarioController {
         return veterinarioService.getAll();
     }
 
+    @PreAuthorize("hasRole('VETERINARIO')")
+    @GetMapping("/me")
+    public PerfilVeterinarioResponse miPerfil(@AuthenticationPrincipal Jwt jwt) {
+        return veterinarioService.miPerfil(jwt.getSubject());
+    }
+
+    @PreAuthorize("hasRole('VETERINARIO')")
+    @PatchMapping("/me")
+    public ResponseEntity<?> actualizarMiPerfil(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody Map<String, Object> campos) {
+
+        if (campos.containsKey("especialidad") || campos.containsKey("nroColegiatura")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Solo ADMIN puede modificar los datos profesionales del veterinario"));
+        }
+
+        Set<String> permitidos = Set.of("nombres", "apellidos", "nroCelular");
+        for (String campo : campos.keySet()) {
+            if (!permitidos.contains(campo)) {
+                throw new BadRequestException("Campo no permitido: " + campo);
+            }
+        }
+
+        ActualizarPerfilVeterinarioRequest request = new ActualizarPerfilVeterinarioRequest();
+        request.setNombres(leerTexto(campos, "nombres"));
+        request.setApellidos(leerTexto(campos, "apellidos"));
+        request.setNroCelular(leerTexto(campos, "nroCelular"));
+
+        var errores = validator.validate(request);
+        if (!errores.isEmpty()) {
+            throw new BadRequestException(errores.iterator().next().getMessage());
+        }
+
+        return ResponseEntity.ok(veterinarioService.actualizarMiPerfil(jwt.getSubject(), request));
+    }
+
+    private String leerTexto(Map<String, Object> campos, String nombre) {
+        if (!campos.containsKey(nombre)) {
+            return null;
+        }
+        Object valor = campos.get(nombre);
+        if (!(valor instanceof String texto)) {
+            throw new BadRequestException("El campo " + nombre + " debe ser texto");
+        }
+        return texto;
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<VeterinarioResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(veterinarioService.getById(id));
     }
 
+    @PostMapping("/registro")
+    public ResponseEntity<VeterinarioResponse> registrar(@Valid @RequestBody RegistrarVeterinarioRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(veterinarioService.registrar(request));
+    }
+
     @PostMapping
     public ResponseEntity<VeterinarioResponse> create(@Valid @RequestBody CreateVeterinarioRequest request) {
         VeterinarioResponse veterinarioCreated = veterinarioService.create(request);
-        return ResponseEntity.ok(veterinarioCreated);
+        return ResponseEntity.status(HttpStatus.CREATED).body(veterinarioCreated);
     }
 
     @PutMapping("/{id}")

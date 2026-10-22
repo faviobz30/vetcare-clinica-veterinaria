@@ -4,6 +4,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import pe.edu.utec.vetcare.dto.request.UsuarioRequest;
+import pe.edu.utec.vetcare.dto.request.ActualizarUsuarioRequest;
 import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
 import pe.edu.utec.vetcare.entity.UsuarioEntity;
 
@@ -28,8 +29,9 @@ public interface UsuarioMapper {
     @Mapping(target = "idUsuario", ignore = true)
     @Mapping(target = "rol", ignore = true)
     @Mapping(target = "fechaRegistro", ignore = true)
+    @Mapping(target = "contrasena", ignore = true)
     void updateEntity(
-            UsuarioRequest request,
+            ActualizarUsuarioRequest request,
             @MappingTarget UsuarioEntity entity
     );
 }

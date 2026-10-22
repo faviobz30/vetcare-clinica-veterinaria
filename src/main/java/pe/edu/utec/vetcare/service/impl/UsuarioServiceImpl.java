@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.utec.vetcare.dto.request.UsuarioRequest;
+import pe.edu.utec.vetcare.dto.request.ActualizarUsuarioRequest;
 import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
 import pe.edu.utec.vetcare.entity.RolEntity;
 import pe.edu.utec.vetcare.entity.UsuarioEntity;
@@ -13,6 +14,7 @@ import pe.edu.utec.vetcare.mapper.UsuarioMapper;
 import pe.edu.utec.vetcare.repository.RolRepository;
 import pe.edu.utec.vetcare.repository.UsuarioRepository;
 import pe.edu.utec.vetcare.service.UsuarioService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 
@@ -24,6 +26,7 @@ public class UsuarioServiceImpl
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -46,82 +49,51 @@ public class UsuarioServiceImpl
 
     @Override
     @Transactional
-    public UsuarioResponse crear(
-            UsuarioRequest request
-    ) {
+    public UsuarioResponse crear(UsuarioRequest request) {
 
-        if (usuarioRepository
-                .existsByCorreo(request.getCorreo())) {
-
-            throw new BadRequestException(
-                    "El correo ya se encuentra registrado"
-            );
+        if (usuarioRepository.existsByCorreo(request.getCorreo())) {
+            throw new BadRequestException("El correo ya se encuentra registrado");
         }
 
-        if (usuarioRepository
-                .existsByNroDocumento(
-                        request.getNroDocumento()
-                )) {
-
-            throw new BadRequestException(
-                    "El documento ya se encuentra registrado"
-            );
+        if (usuarioRepository.existsByNroDocumento(request.getNroDocumento())) {
+            throw new BadRequestException("El documento ya se encuentra registrado");
         }
 
         RolEntity rol = rolRepository
                 .findById(request.getIdRol())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Rol no encontrado"
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
 
-        UsuarioEntity entity =
-                usuarioMapper.toEntity(request);
+        UsuarioEntity entity = usuarioMapper.toEntity(request);
 
         entity.setRol(rol);
 
-        return usuarioMapper.toResponse(
-                usuarioRepository.save(entity)
-        );
+        entity.setContrasena(passwordEncoder.encode(request.getContrasena()));
+
+        return usuarioMapper.toResponse(usuarioRepository.save(entity));
     }
 
     @Override
     @Transactional
-    public UsuarioResponse actualizar(
-            Long id,
-            UsuarioRequest request
-    ) {
+    public UsuarioResponse actualizar(Long id, ActualizarUsuarioRequest request) {
+        UsuarioEntity entity = buscarUsuario(id);
 
-        UsuarioEntity entity =
-                buscarUsuario(id);
+        if (usuarioRepository.existsByCorreoAndIdUsuarioNot(request.getCorreo(), id)) {
+            throw new BadRequestException("El correo ya se encuentra registrado");
+        }
+        if (usuarioRepository.existsByNroDocumentoAndIdUsuarioNot(request.getNroDocumento(), id)) {
+            throw new BadRequestException("El documento ya se encuentra registrado");
+        }
 
-        RolEntity rol = rolRepository
-                .findById(request.getIdRol())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Rol no encontrado"
-                        )
-                );
-
-        usuarioMapper.updateEntity(
-                request,
-                entity
-        );
-
-        entity.setRol(rol);
-
-        return usuarioMapper.toResponse(
-                usuarioRepository.save(entity)
-        );
+        usuarioMapper.updateEntity(request, entity);
+        // La contraseña y el rol permanecen intactos en esta operación.
+        return usuarioMapper.toResponse(usuarioRepository.save(entity));
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
 
-        UsuarioEntity entity =
-                buscarUsuario(id);
+        UsuarioEntity entity = buscarUsuario(id);
 
         usuarioRepository.delete(entity);
     }
@@ -129,10 +101,6 @@ public class UsuarioServiceImpl
     private UsuarioEntity buscarUsuario(Long id) {
 
         return usuarioRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Usuario no encontrado"
-                        )
-                );
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 }

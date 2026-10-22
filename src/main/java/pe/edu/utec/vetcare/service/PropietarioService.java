@@ -20,5 +20,7 @@ public interface PropietarioService {
             PropietarioRequest request
     );
 
+    PropietarioResponse actualizarMiDireccion(String direccion);
+
     void eliminar(Long id);
 }

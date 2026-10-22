@@ -1,148 +1,100 @@
 package pe.edu.utec.vetcare.security;
 
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.Arrays;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+import java.util.List;
+
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
-        return new BCryptPasswordEncoder();
+    @Bean
+    SecretKeySpec jwtKey(@Value("${JWT_SECRET}") String encodedSecret) {
+        byte[] key;
+        try { key = Base64.getDecoder().decode(encodedSecret); }
+        catch (IllegalArgumentException ex) { throw new IllegalStateException("JWT_SECRET debe estar codificado en Base64", ex); }
+        if (key.length < 32) throw new IllegalStateException("JWT_SECRET debe contener al menos 32 bytes aleatorios");
+        return new SecretKeySpec(key, "HmacSHA256");
     }
 
     @Bean
-    public InMemoryUserDetailsManager userDetailsService(
-            PasswordEncoder passwordEncoder
-    ) {
-
-        UserDetails admin =
-                User.withUsername("admin")
-                        .password(
-                                passwordEncoder.encode("admin123")
-                        )
-                        .roles("ADMIN")
-                        .build();
-
-        UserDetails veterinario =
-                User.withUsername("veterinario")
-                        .password(
-                                passwordEncoder.encode("vet123")
-                        )
-                        .roles("VETERINARIO")
-                        .build();
-
-        UserDetails propietario =
-                User.withUsername("propietario")
-                        .password(
-                                passwordEncoder.encode("prop123")
-                        )
-                        .roles("PROPIETARIO")
-                        .build();
-
-        return new InMemoryUserDetailsManager(
-                admin,
-                veterinario,
-                propietario
-        );
+    JwtEncoder jwtEncoder(SecretKeySpec jwtKey) {
+        return new NimbusJwtEncoder(new ImmutableSecret<SecurityContext>(jwtKey));
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http
-    ) throws Exception {
+    JwtDecoder jwtDecoder(SecretKeySpec jwtKey) {
+        return NimbusJwtDecoder.withSecretKey(jwtKey).macAlgorithm(MacAlgorithm.HS256).build();
+    }
 
-        http
-                .csrf(csrf ->
-                        csrf.disable()
-                )
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        var converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            String role = jwt.getClaimAsString("rol");
+            if (role == null || !List.of("ADMIN", "VETERINARIO", "PROPIETARIO").contains(role)) return List.of();
+            return List.of(new SimpleGrantedAuthority("ROLE_" + role));
+        });
+        return converter;
+    }
 
-                .authorizeHttpRequests(auth -> auth
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(
+            @Value("${VETCARE_CORS_ORIGINS:http://localhost:5173}") String origins) {
+        CorsConfiguration cors = new CorsConfiguration();
+        cors.setAllowedOrigins(Arrays.stream(origins.split(",")).map(String::trim).toList());
+        cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        cors.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", cors);
+        return source;
+    }
 
-                        // USUARIOS
-                        .requestMatchers(
-                                "/api/usuarios/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // PROPIETARIOS
-                        .requestMatchers(
-                                "/api/propietarios/**"
-                        )
-                        .hasAnyRole(
-                                "ADMIN",
-                                "PROPIETARIO"
-                        )
-
-                        // VETERINARIOS
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/veterinarios/**"
-                        )
-                        .authenticated()
-
-                        .requestMatchers(
-                                "/api/veterinarios/**"
-                        )
-                        .hasRole("ADMIN")
-
-                        // MASCOTAS
-                        .requestMatchers(
-                                "/api/mascotas/**"
-                        )
-                        .hasAnyRole(
-                                "ADMIN",
-                                "VETERINARIO",
-                                "PROPIETARIO"
-                        )
-
-                        // HISTORIAS CLINICAS
-                        .requestMatchers(
-                                "/api/historias-clinicas/**"
-                        )
-                        .hasAnyRole(
-                                "ADMIN",
-                                "VETERINARIO",
-                                "PROPIETARIO"
-                        )
-
-                        // CITAS
-                        .requestMatchers(
-                                "/api/citas/**"
-                        )
-                        .hasAnyRole(
-                                "ADMIN",
-                                "VETERINARIO",
-                                "PROPIETARIO"
-                        )
-
-                        // ATENCIONES
-                        .requestMatchers(
-                                "/api/atenciones/**"
-                        )
-                        .hasAnyRole(
-                                "ADMIN",
-                                "VETERINARIO"
-                        )
-
-                        .anyRequest()
-                        .authenticated()
-                )
-
-                .httpBasic(
-                        Customizer.withDefaults()
-                );
-
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter converter) throws Exception {
+        http.cors(cors -> {}).csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/registro").permitAll()
+                .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
+                .requestMatchers("/api/propietarios/**").hasAnyRole("ADMIN", "PROPIETARIO")
+                .requestMatchers(HttpMethod.GET, "/api/veterinarios/me").hasRole("VETERINARIO")
+                .requestMatchers(HttpMethod.PATCH, "/api/veterinarios/me").hasRole("VETERINARIO")
+                .requestMatchers(HttpMethod.GET, "/api/veterinarios/**").authenticated()
+                .requestMatchers("/api/veterinarios/**").hasRole("ADMIN")
+                .requestMatchers("/api/mascotas/**", "/api/historias-clinicas/**", "/api/citas/**")
+                    .hasAnyRole("ADMIN", "VETERINARIO", "PROPIETARIO")
+                .requestMatchers(HttpMethod.GET, "/api/atenciones/**").hasAnyRole("ADMIN", "VETERINARIO", "PROPIETARIO")
+                .requestMatchers("/api/atenciones/**").hasAnyRole("ADMIN", "VETERINARIO")
+                .anyRequest().authenticated())
+            .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(converter)));
         return http.build();
     }
 }

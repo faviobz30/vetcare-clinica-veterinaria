@@ -1,12 +1,18 @@
 package pe.edu.utec.vetcare.service;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import pe.edu.utec.vetcare.dto.request.CreateCitaRequest;
 import pe.edu.utec.vetcare.entity.MascotaEntity;
+import pe.edu.utec.vetcare.enums.EstadoCita;
 import pe.edu.utec.vetcare.entity.VeterinarioEntity;
 import pe.edu.utec.vetcare.exception.CitaHorarioOcupadoException;
 import pe.edu.utec.vetcare.mapper.CitaMapper;
@@ -42,6 +48,9 @@ class CitaServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin@test.local", "n/a",
+                        List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
 
         citaService =
                 new CitaServiceImpl(
@@ -50,6 +59,11 @@ class CitaServiceImplTest {
                         mascotaRepository,
                         citaMapper
                 );
+    }
+
+    @AfterEach
+    void limpiarContexto() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -95,7 +109,8 @@ class CitaServiceImplTest {
                         .existsCitaSuperpuesta(
                                 eq(1L),
                                 any(LocalDateTime.class),
-                                any(LocalDateTime.class)
+                                any(LocalDateTime.class),
+                                eq(EstadoCita.CANCELADA)
                         )
         ).thenReturn(true);
 

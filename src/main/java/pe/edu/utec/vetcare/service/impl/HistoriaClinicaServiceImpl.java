@@ -3,6 +3,9 @@ package pe.edu.utec.vetcare.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
+import pe.edu.utec.vetcare.security.AccesoClinico;
+import pe.edu.utec.vetcare.repository.CitaRepository;
 import pe.edu.utec.vetcare.dto.response.HistoriaClinicaResponse;
 import pe.edu.utec.vetcare.entity.HistoriaClinicaEntity;
 import pe.edu.utec.vetcare.exception.ResourceNotFoundException;
@@ -18,6 +21,7 @@ public class HistoriaClinicaServiceImpl
     private final HistoriaClinicaRepository repository;
 
     private final HistoriaClinicaMapper mapper;
+    private final CitaRepository citaRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -31,6 +35,7 @@ public class HistoriaClinicaServiceImpl
                                 )
                         );
 
+        comprobarLectura(entity);
         return mapper.toResponse(entity);
     }
 
@@ -50,6 +55,14 @@ public class HistoriaClinicaServiceImpl
                                 )
                         );
 
+        comprobarLectura(entity);
         return mapper.toResponse(entity);
+    }
+    private void comprobarLectura(HistoriaClinicaEntity historia) {
+        var mascota = historia.getMascota();
+        if (AccesoClinico.es("ADMIN") || (AccesoClinico.es("PROPIETARIO") && AccesoClinico.esPropietario(mascota))
+                || (AccesoClinico.es("VETERINARIO") && citaRepository.existsByMascota_IdMascotaAndVeterinario_Usuario_Correo(
+                        mascota.getIdMascota(), AccesoClinico.correo()))) return;
+        throw new AccessDeniedException("No puede consultar esta historia clínica");
     }
 }

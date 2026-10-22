@@ -1,6 +1,9 @@
 package pe.edu.utec.vetcare.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.utec.vetcare.dto.request.PropietarioRequest;
@@ -39,9 +42,9 @@ public class PropietarioServiceImpl
     @Transactional(readOnly = true)
     public PropietarioResponse obtener(Long id) {
 
-        return propietarioMapper.toResponse(
-                buscarPropietario(id)
-        );
+        PropietarioEntity entity = buscarPropietario(id);
+        validarLecturaPropietario(entity);
+        return propietarioMapper.toResponse(entity);
     }
 
     @Override
@@ -101,12 +104,54 @@ public class PropietarioServiceImpl
 
     @Override
     @Transactional
+    public PropietarioResponse actualizarMiDireccion(String direccion) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+        Object claim = jwtAuth.getToken().getClaim("idUsuario");
+        if (!(claim instanceof Number idUsuarioToken)) {
+            throw new AccessDeniedException("Token sin identificador de usuario");
+        }
+        PropietarioEntity entity = propietarioRepository
+                .findByUsuarioIdUsuario(idUsuarioToken.longValue())
+                .orElseThrow(() -> new ResourceNotFoundException("Propietario no encontrado"));
+        entity.setDireccion(direccion);
+        return propietarioMapper.toResponse(propietarioRepository.save(entity));
+    }
+
+    @Override
+    @Transactional
     public void eliminar(Long id) {
 
         PropietarioEntity entity =
                 buscarPropietario(id);
 
         propietarioRepository.delete(entity);
+    }
+
+    /**
+     * ADMIN puede consultar cualquier propietario. PROPIETARIO solo el suyo.
+     * El idUsuario proviene del JWT firmado, nunca de un dato del cliente.
+     */
+    private void validarLecturaPropietario(PropietarioEntity entity) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (admin) {
+            return;
+        }
+        if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+        Object claim = jwtAuth.getToken().getClaim("idUsuario");
+        if (!(claim instanceof Number idUsuarioToken)
+                || !entity.getUsuario().getIdUsuario().equals(idUsuarioToken.longValue())) {
+            throw new AccessDeniedException("No puedes consultar otro propietario");
+        }
     }
 
     private PropietarioEntity buscarPropietario(

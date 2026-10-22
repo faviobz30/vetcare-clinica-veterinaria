@@ -2,9 +2,11 @@ package pe.edu.utec.vetcare.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.utec.vetcare.dto.request.PropietarioRequest;
+import pe.edu.utec.vetcare.dto.request.ActualizarDireccionPropietarioRequest;
 import pe.edu.utec.vetcare.dto.response.PropietarioResponse;
 import pe.edu.utec.vetcare.service.PropietarioService;
 
@@ -17,6 +19,7 @@ public class PropietarioController {
 
     private final PropietarioService propietarioService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public List<PropietarioResponse> listar() {
 
@@ -31,6 +34,7 @@ public class PropietarioController {
         return propietarioService.obtener(id);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PropietarioResponse crear(
@@ -41,6 +45,7 @@ public class PropietarioController {
         return propietarioService.crear(request);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public PropietarioResponse actualizar(
             @PathVariable Long id,
@@ -54,6 +59,15 @@ public class PropietarioController {
         );
     }
 
+    @PreAuthorize("hasRole('PROPIETARIO')")
+    @PatchMapping("/me/direccion")
+    public PropietarioResponse actualizarMiDireccion(
+            @Valid @RequestBody ActualizarDireccionPropietarioRequest request
+    ) {
+        return propietarioService.actualizarMiDireccion(request.getDireccion());
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void eliminar(

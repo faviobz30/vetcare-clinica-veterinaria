@@ -1,6 +1,7 @@
 package pe.edu.utec.vetcare.controller;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.utec.vetcare.dto.request.CreateCitaRequest;
@@ -30,33 +31,39 @@ public class CitaController {
         return ResponseEntity.ok(citaService.getById(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROPIETARIO')")
     @PostMapping
     public ResponseEntity<CitaResponse> create(@Valid @RequestBody CreateCitaRequest request) {
         return ResponseEntity.ok(citaService.create(request));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROPIETARIO')")
     @PutMapping("/{id}")
     public ResponseEntity<CitaResponse> update(@PathVariable Long id,
             @Valid @RequestBody UpdateCitaRequest request) {
         return ResponseEntity.ok(citaService.update(id, request));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         citaService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'VETERINARIO')")
     @PutMapping("/{id}/confirmar")
     public ResponseEntity<CitaResponse> confirm(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.confirm(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROPIETARIO')")
     @PutMapping("/{id}/cancelar")
     public ResponseEntity<CitaResponse> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.cancel(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'VETERINARIO')")
     @PutMapping("/{id}/atender")
     public ResponseEntity<CitaResponse> attend(@PathVariable Long id) {
         return ResponseEntity.ok(citaService.attend(id));

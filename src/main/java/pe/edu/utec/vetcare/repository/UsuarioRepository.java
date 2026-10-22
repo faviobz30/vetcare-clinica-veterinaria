@@ -12,5 +12,9 @@ public interface UsuarioRepository
 
     boolean existsByCorreo(String correo);
 
+    boolean existsByCorreoAndIdUsuarioNot(String correo, Long idUsuario);
+
+    boolean existsByNroDocumentoAndIdUsuarioNot(String nroDocumento, Long idUsuario);
+
     boolean existsByNroDocumento(String nroDocumento);
 }

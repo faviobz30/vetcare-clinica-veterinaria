@@ -1,6 +1,11 @@
 package pe.edu.utec.vetcare.service.impl;
 
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.annotation.Transactional;
+import pe.edu.utec.vetcare.security.AccesoClinico;
+import pe.edu.utec.vetcare.exception.BadRequestException;
+import pe.edu.utec.vetcare.exception.ResourceNotFoundException;
 import pe.edu.utec.vetcare.dto.request.CreateAtencionRequest;
 import pe.edu.utec.vetcare.dto.request.UpdateAtencionRequest;
 import pe.edu.utec.vetcare.dto.response.AtencionResponse;
@@ -22,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class AtencionServiceImpl
         implements AtencionService {
 
@@ -56,6 +62,7 @@ public class AtencionServiceImpl
 
         return atencionRepository.findAll()
                 .stream()
+                .filter(this::puedeLeer)
                 .map(atencionMapper::toResponse)
                 .toList();
     }
@@ -71,10 +78,12 @@ public class AtencionServiceImpl
                                 )
                         );
 
+        comprobarLectura(entity);
         return atencionMapper.toResponse(entity);
     }
 
     @Override
+    @Transactional
     public AtencionResponse create(
             CreateAtencionRequest request) {
 
@@ -84,16 +93,17 @@ public class AtencionServiceImpl
                                 request.getIdCita()
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Cita no encontrada"
                                 )
                         );
 
+        comprobarEscrituraCita(cita);
         if (cita.getEstado()
-                != EstadoCita.ATENDIDA) {
+                != EstadoCita.CONFIRMADA) {
 
             throw new EstadoCitaInvalidoException(
-                    "Solo se puede registrar una atención para una cita ATENDIDA"
+                    "La cita debe estar en estado CONFIRMADA para registrar sus datos clínicos"
             );
         }
 
@@ -103,10 +113,14 @@ public class AtencionServiceImpl
                                 request.getIdVeterinario()
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Veterinario no encontrado"
                                 )
                         );
+
+        if (!veterinario.getIdVeterinario().equals(cita.getVeterinario().getIdVeterinario())) {
+            throw new BadRequestException("El veterinario de la atención debe ser el asignado a la cita");
+        }
 
         HistoriaClinicaEntity historiaClinica =
                 historiaClinicaRepository
@@ -114,7 +128,7 @@ public class AtencionServiceImpl
                                 request.getIdHistoria()
                         )
                         .orElseThrow(() ->
-                                new RuntimeException(
+                                new ResourceNotFoundException(
                                         "Historia clínica no encontrada"
                                 )
                         );
@@ -145,7 +159,7 @@ public class AtencionServiceImpl
                                 .getIdMascota()
                 )) {
 
-            throw new RuntimeException(
+            throw new EstadoCitaInvalidoException(
                     "La historia clínica no pertenece a la mascota de la cita"
             );
         }
@@ -194,12 +208,17 @@ public class AtencionServiceImpl
         AtencionEntity savedEntity =
                 atencionRepository.save(entity);
 
+        // Mismo @Transactional: si falla el registro, no se cambia la cita.
+        cita.setEstado(EstadoCita.ATENDIDA);
+        citaRepository.save(cita);
+
         return atencionMapper.toResponse(
                 savedEntity
         );
     }
 
     @Override
+    @Transactional
     public AtencionResponse update(
             Long id,
             UpdateAtencionRequest request) {
@@ -212,6 +231,7 @@ public class AtencionServiceImpl
                                 )
                         );
 
+        comprobarEscrituraCita(entity.getCita());
         atencionMapper.updateEntity(
                 request,
                 entity
@@ -226,6 +246,7 @@ public class AtencionServiceImpl
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
 
         AtencionEntity entity =
@@ -236,6 +257,20 @@ public class AtencionServiceImpl
                                 )
                         );
 
+        AccesoClinico.soloAdmin();
         atencionRepository.delete(entity);
+    }
+    private boolean puedeLeer(AtencionEntity entity) {
+        return AccesoClinico.es("ADMIN") || (AccesoClinico.es("VETERINARIO") && AccesoClinico.esVeterinario(entity.getCita()))
+                || (AccesoClinico.es("PROPIETARIO") && AccesoClinico.esPropietario(entity.getCita()));
+    }
+
+    private void comprobarLectura(AtencionEntity entity) {
+        if (!puedeLeer(entity)) throw new AccessDeniedException("No puede consultar esta atención");
+    }
+
+    private void comprobarEscrituraCita(CitaEntity cita) {
+        if (AccesoClinico.es("ADMIN") || (AccesoClinico.es("VETERINARIO") && AccesoClinico.esVeterinario(cita))) return;
+        throw new AccessDeniedException("Solo el veterinario asignado o ADMIN puede registrar o modificar la atención");
     }
 }
