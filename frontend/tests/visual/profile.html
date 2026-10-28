@@ -1,0 +1,44 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Mi perfil</title><style>.capture .qa-tools{display:none}</style><body><div id="root"></div><script type="module">
+// Fixtures exclusivamente de interfaz: el adaptador bloquea toda conexión a la API real.
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter,Routes,Route} from 'react-router-dom'
+import Shell from '/src/components/Shell.jsx'
+import Perfil from '/src/pages/Perfil.jsx'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import {api} from '/src/lib/api.js'
+import '/src/index.css'
+const h=React.createElement,q=new URLSearchParams(location.search),role=q.get('role')==='vet'?'VETERINARIO':'PROPIETARIO'
+if(q.has('captura'))document.documentElement.classList.add('capture')
+const token=['qa',btoa(JSON.stringify({idUsuario:901,rol:role,exp:4102444800})),'qa'].join('.')
+sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role',role)
+let profile={idUsuario:901,nombres:role==='VETERINARIO'?'Elena':'Ana',apellidos:'Herrera',correo:'perfil.qa@example.invalid',nroCelular:'999111222',tipoDocumento:'DNI',nroDocumento:'12345678',rol:role,fechaRegistro:'2026-10-15'},owner={direccion:'Av. Perú 150',estadoCliente:'ACTIVO',fechaRegistroClinica:'2026-10-15'},vet={nombres:'Elena',apellidos:'Herrera',nroCelular:'999111222',especialidad:'Medicina veterinaria general',nroColegiatura:'QA-002',tratamientoProfesional:'Dra.'},photo=null,writes=0,fail=false
+const reject=(status,error,config)=>{throw {response:{status,data:{error}},config}}
+api.defaults.adapter=async config=>{
+ let data;const url=config.url,method=config.method,body=typeof config.data==='string'?JSON.parse(config.data):config.data
+ if(method!=='get'){writes++;await new Promise(r=>setTimeout(r,160));if(fail){fail=false;reject(400,'Error sintético: revisa los datos.',config)}
+ if(url==='/usuarios/me/foto'){if(method==='delete')photo=null;else photo=body.get('foto');data={...profile}}
+ else if(url==='/propietarios/me'){Object.assign(profile,Object.fromEntries(Object.entries(body).filter(([k])=>k!=='direccion')));if('direccion'in body)owner.direccion=body.direccion;data={...profile}}
+ else if(url==='/veterinarios/me'){Object.assign(vet,body);for(const k of ['nombres','apellidos','nroCelular'])if(k in body)profile[k]=body[k];data={...vet}}
+ else reject(404,'Escritura no permitida',config)
+ }else if(url==='/usuarios/me')data={...profile}
+ else if(url==='/propietarios/me')data={...owner}
+ else if(url==='/veterinarios/me')data={...vet}
+ else if(url==='/usuarios/me/foto'){if(!photo)reject(404,'Sin fotografía',config);data=photo}
+ else reject(404,'No disponible en fixture',config)
+ return {data,status:200,statusText:'OK',config,headers:{}}
+}
+const wait=async pred=>{for(let i=0;i<250;i++){if(pred())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+const button=(text,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text)
+const field=label=>[...document.querySelectorAll('form label')].find(l=>l.querySelector('span')?.textContent===label)?.querySelector('input,select')
+function fill(node,value){Object.getOwnPropertyDescriptor(node.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype,'value').set.call(node,value);node.dispatchEvent(new Event(node.tagName==='SELECT'?'change':'input',{bubbles:true}))}
+async function run(){const passed=[];const check=(x,t)=>{if(!x)throw Error(t);passed.push(t)};try{
+ check(document.querySelectorAll('.profile-card').length===3,'Tres tarjetas');check(document.querySelector('.account-profile h1').textContent==='Mi perfil','Título uniforme');check(document.querySelector('[aria-label="Tipo de documento (solo lectura)"]').disabled,'Identidad bloqueada')
+ fill(field('Nombres'),'María');fill(field('Celular'),'987222333');if(role==='PROPIETARIO')fill(field('Dirección'),'Calle sintética 200');else fill(field('Tratamiento profesional'),'Dr.');await new Promise(r=>setTimeout(r,0));let before=writes;button('Guardar cambios').click();button('Guardar cambios').click();await wait(()=>document.querySelector('[role=status]')?.textContent.includes('guardados'));check(writes===before+1,'Una escritura por guardado');check(profile.nombres==='María','Nombre persistido en adaptador');check(document.querySelector('.profile-identity h2').textContent.includes('María'),'Nombre del perfil sincronizado');check([...document.querySelectorAll('strong')].some(n=>n.textContent.includes('María')),'Encabezado sincronizado');if(role==='VETERINARIO')check(document.querySelector('.profile-identity h2').textContent.startsWith('Dr.'),'Tratamiento explícito');
+ fill(field('Apellidos'),'Conservado');await new Promise(r=>setTimeout(r,0));fail=true;button('Guardar cambios').click();await wait(()=>document.querySelector('[role=alert]'));check(field('Apellidos').value==='Conservado','Error conserva formulario');check(profile.apellidos==='Herrera','Error no simula guardado');
+ const canvas=document.createElement('canvas');canvas.width=40;canvas.height=40;const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const file=new File([blob],'qa.png',{type:'image/png'});const dt=new DataTransfer();dt.items.add(file);const input=document.querySelector('input[type=file]');before=writes;input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('dialog[open]'));check(writes===before,'Vista previa sin subir');button('Cancelar',document.querySelector('dialog')).click();await wait(()=>!document.querySelector('dialog'));check(writes===before,'Cancelar foto sin escribir');
+ const secondTransfer=new DataTransfer();secondTransfer.items.add(file);input.files=secondTransfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('dialog[open]'));button('Guardar foto',document.querySelector('dialog')).click();await wait(()=>!document.querySelector('dialog'));await wait(()=>document.querySelector('.profile-avatar img'));check(!!photo,'Foto confirmada');check(document.querySelectorAll('img[alt="Fotografía de perfil"]').length>0,'Foto del encabezado sincronizada');button('Quitar foto').click();await wait(()=>document.querySelector('dialog[open]'));button('Quitar foto',document.querySelector('dialog')).click();await wait(()=>!document.querySelector('dialog'));check(photo===null,'Foto quitada');check(!document.querySelector('.profile-avatar img'),'Avatar neutro');check(document.documentElement.scrollWidth<=innerWidth,'Sin desborde horizontal');
+ document.getElementById('qa-result').textContent=passed.length+' verificaciones correctas · '+passed.join(' · ')
+ }catch(error){document.getElementById('qa-result').textContent='FALLO: '+error.message+' · '+passed.join(' · ')}}
+createRoot(document.getElementById('root')).render(h(AuthProvider,null,h(MemoryRouter,{initialEntries:['/panel/perfil']},h('div',null,h('p',{style:{fontSize:12,padding:8,color:'#6B7280'}},'REVISIÓN AISLADA · Datos sintéticos · Sin API ni PostgreSQL'),h('div',{className:'qa-tools'},h('button',{onClick:run},'Comprobar perfil'),h('output',{id:'qa-result'})),h(Routes,null,h(Route,{element:h(Shell)},h(Route,{path:'/panel/perfil',element:h(Perfil)})))))))
+</script></body></html>

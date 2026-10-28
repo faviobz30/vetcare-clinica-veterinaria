@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-vetcare-primary: #5B21B6;
+  --color-vetcare-secondary: #7C3AED;
+  --color-vetcare-soft: #E9D5FF;
+  --color-vetcare-soft-2: #F3E8FF;
+  --color-vetcare-bg: #FBF9F6;
+  --color-vetcare-surface: #FFFFFF;
+  --color-vetcare-text: #2F1F4A;
+  --color-vetcare-text-muted: #6B5A8E;
+  --color-vetcare-success: #399477;
+}
+:root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #2F1F4A; background: #FBF9F6; font-synthesis: none; text-rendering: optimizeLegibility; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+.input { width: 100%; border: 1px solid #ded5ed; border-radius: 12px; background: white; padding: 12px 14px; outline: none; }
+.input:focus { border-color: #7C3AED; box-shadow: 0 0 0 3px #E9D5FF; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; padding: 10px 16px; font-weight: 650; transition: background .15s ease; }
+.btn-primary { background: #5B21B6; color: white; }
+.btn-primary:hover { background: #7C3AED; }
+.btn-ghost { border: 1px solid #e6dcf1; background: white; color: #5B21B6; }
+.btn-ghost:hover { background: #F3E8FF; }
+
+
+/* VetCare 09: shared, accessible spacing and refined palette */
+:root { --vet-emerald:#078565; --vet-emerald-soft:#d7f5e8; --vet-purple:#5921b5; }
+.input { min-height:46px; padding:12px 18px; color:#321b50; }
+select.input { appearance:none; padding-right:52px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235b21b6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 18px center; background-size:18px; }
+input[type='datetime-local'].input { color-scheme:light; padding-right:18px; accent-color:var(--vet-emerald); }
+input[type='datetime-local']::-webkit-calendar-picker-indicator { cursor:pointer; margin-left:12px; opacity:.85; }
+.vet-select { position:relative; width:100%; min-width:0; }
+.vet-select-trigger { background:white; border:1px solid #ded5ed; border-radius:12px; padding:12px 18px; min-height:46px; width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; text-align:left; color:#321b50; }
+.vet-select-trigger > svg { flex:none; color:#5921b5; transition:transform .15s; }
+.vet-select-trigger:focus-visible { outline:2px solid #7c3aed; outline-offset:2px; }
+.vet-select-placeholder { color:#817391; }
+.vet-select-menu { position:absolute; top:calc(100% + 7px); left:0; width:100%; z-index:100; background:#fff; border:1px solid #e8daf7; border-radius:14px; padding:6px; box-shadow:0 16px 35px rgba(49,16,99,.17); max-height:260px; overflow-y:auto; }
+.vet-select-option { width:100%; display:flex; justify-content:space-between; align-items:center; text-align:left; gap:10px; border-radius:9px; padding:11px 13px; color:#35166a; font-size:14px; }
+.vet-select-option:hover,.vet-select-option[aria-selected='true'] { background:#f3ebff; }
+.vet-select-empty { color:#817391; padding:12px; font-size:14px; }
+.vet-select-validation { position:absolute; opacity:0; width:1px; height:1px; bottom:0; left:50%; pointer-events:none; }
+.vetcare-hero-slogan { font-family:'Segoe Print','Bradley Hand','Comic Sans MS',cursive; color:#5724a4; transform:rotate(-9deg); font-style:italic; text-align:center; line-height:1.15; text-shadow:0 1px 0 #ffffff80; }
+.vetcare-hero-slogan:after { content:'♡'; display:block; font-size:1.45em; margin-top:2px; }
+.vet-date-mark { background:#d5f5e8; color:#056d51; font-weight:800; border-radius:12px; position:relative; }
+.vet-date-mark:after { content:''; position:absolute; bottom:3px; left:calc(50% - 2px); width:4px; height:4px; border-radius:50%; background:#078565; }
+.vet-date-mark-expired { background:#fef0df; color:#9b5110; }
+.vet-date-mark-expired:after { background:#b45309; }
+@media(max-width:800px){.vetcare-hero-slogan{display:none}}
+
+/* VetCare 10 — hero matching the original lilac prototype */
+.vetcare-hero { background:linear-gradient(107deg,#ead9ff 0%,#f8f0ff 44%,#edddff 100%); isolation:isolate; }
+.vetcare-hero-shapes { position:absolute;inset:0;width:100%;height:100%;z-index:-1; }
+.vetcare-hero-copy { max-width:56%; }
+.vetcare-hero-doodles { position:absolute;right:10%;bottom:1%;width:32%;height:91%;pointer-events:none;opacity:.9; }
+.vetcare-hero-slogan { font-family:'Segoe Print','Bradley Hand','Comic Sans MS',cursive; font-style:italic; font-weight:500; transform:rotate(-10deg); letter-spacing:-.025em; }
+@media(max-width:900px){ .vetcare-hero-copy {max-width:70%;}.vetcare-hero-pets {right:0!important;width:36%!important;opacity:.88}.vetcare-hero-doodles {display:none}.vetcare-hero-slogan {display:none} }
+@media(max-width:520px){.vetcare-hero-copy{max-width:100%;}.vetcare-hero-pets{opacity:.17;width:70%!important} }
+/* VetCare 10 — fully controlled date and time picker; no browser-blue calendar */
+.vet-datetime { position:relative;width:100%;min-width:0; }
+.vet-datetime-trigger { width:100%;min-height:46px;border:1px solid #ded5ed;border-radius:12px;background:white;padding:12px 16px;display:flex;align-items:center;gap:11px;text-align:left;color:#381968; }
+.vet-datetime-trigger:focus-visible {outline:2px solid #6c2bc2;outline-offset:2px}
+.vet-datetime-trigger>svg:first-child {color:#6523b2;flex-shrink:0}
+.vet-datetime-trigger span {flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.vet-datetime-placeholder {color:#82718e}
+.vet-datetime-chevron {flex-shrink:0;color:#5921b5}
+.vet-datetime-required {position:absolute;bottom:0;left:50%;width:1px;height:1px;opacity:0;pointer-events:none}
+.vet-datetime-popover {position:absolute;z-index:150;top:calc(100% + 9px);left:0;width:min(585px,calc(100vw - 40px));background:white;border:1px solid #e3d6f5;border-radius:17px;box-shadow:0 20px 55px #28103b38;padding:15px;color:#2f1f4a}
+.vet-datetime-layout {display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:16px}
+.vet-datetime-calendar {min-width:0}
+.vet-datetime-heading {display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:12px;text-transform:capitalize;font-size:14px}
+.vet-datetime-nav {display:flex;gap:4px}
+.vet-datetime-nav button {padding:5px;border-radius:9px;color:#5b21b6;background:#f5efff}
+.vet-datetime-nav button:hover {background:#e9dcfc}
+.vet-datetime-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.vet-datetime-weekday {text-align:center;color:#796596;font-size:11px;font-weight:700;padding:5px 0}
+.vet-datetime-day {height:31px;min-width:0;border-radius:9px;text-align:center;color:#351c57;font-size:13px}
+.vet-datetime-day:hover {background:#e8f7f0;color:#067957}
+.vet-datetime-day.is-selected {background:#07966d;color:white;font-weight:800;box-shadow:0 3px 8px #07966d33}
+.vet-datetime-time {border-left:1px solid #ece3f7;padding-left:15px;min-width:0}
+.vet-datetime-time-title {font-size:13px;font-weight:700;color:#35166a}
+.vet-datetime-time-row {display:flex;align-items:end;gap:5px;margin-top:15px}
+.vet-datetime-time-row label {flex:1;min-width:0;display:grid;gap:5px;font-size:11px;color:#726087;font-weight:600}
+.vet-datetime-time-row select {width:100%;min-width:0;border:1px solid #cfebdf;border-radius:9px;background:#e0f6ec;color:#057857;padding:9px 4px;font-weight:800;outline-color:#07966d}
+.vet-datetime-time-row>span {padding-bottom:10px}
+.vet-datetime-time p {font-size:11px;line-height:1.5;color:#867397;margin-top:13px}
+.vet-datetime-footer {display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid #eee5f7;margin-top:13px;padding-top:13px;font-size:12px}
+.vet-datetime-footer>div {display:flex;align-items:center;gap:7px}
+.vet-datetime-clear {color:#6c31b4;font-weight:650}
+.vet-datetime-cancel {border:1px solid #e5d9f3;border-radius:9px;padding:8px 11px;color:#5823a4;font-weight:650}
+.vet-datetime-apply {background:#07966d;color:white;border-radius:9px;padding:9px 12px;display:inline-flex;align-items:center;gap:5px;font-weight:750}
+.vet-datetime-apply:hover {background:#057b59}
+@media(max-width:660px){.vet-datetime-popover{left:50%;transform:translateX(-50%);width:min(360px,calc(100vw - 30px))}.vet-datetime-layout{grid-template-columns:1fr}.vet-datetime-time{border-left:0;border-top:1px solid #eee5f7;padding:10px 0 0}.vet-datetime-time-row{margin-top:7px}.vet-datetime-time p{display:none}}
+
+/* VetCare 12 — portada pública de historias (estilos aislados) */
+.landing-vetcare { scroll-behavior:smooth; }
+.landing-vetcare .landing-button { display:inline-flex;justify-content:center;align-items:center;gap:8px;border-radius:14px;padding:10px 19px;font-size:14px;font-weight:750;text-decoration:none;transition:transform .15s,background .15s; }
+.landing-vetcare .landing-button:hover { transform:translateY(-1px); }
+.landing-vetcare .landing-button-main { background:linear-gradient(135deg,#7228d4,#5218ab);color:white;box-shadow:0 7px 18px #5522a729; }
+.landing-vetcare .landing-button-outline { background:#fff;border:1.5px solid #8440d7;color:#6125b5; }
+.landing-vetcare .landing-button-large { padding:13px 19px; }
+.landing-vetcare .landing-hero { background:linear-gradient(106deg,#e9d7fd 0%,#f9f3ff 51%,#edddff 100%); }
+.landing-vetcare .landing-hero-blob { position:absolute;z-index:0;inset:auto 0 0;height:70%;border-radius:60% 35% 0 0;background:#b891ee30; }
+.landing-vetcare .landing-handwritten { font-family:'Segoe Print','Bradley Hand','Comic Sans MS',cursive;font-style:italic; }
+.landing-vetcare .landing-story { transition:transform .2s,box-shadow .2s; }
+.landing-vetcare .landing-story:hover { transform:translateY(-3px);box-shadow:0 12px 28px #4c208116; }
+.landing-vetcare .landing-story-lila { background:linear-gradient(135deg,#ead7fc,#f7ebff); }
+.landing-vetcare .landing-story-verde { background:linear-gradient(135deg,#d6f7e9,#effcf6); }
+.landing-vetcare .landing-story-rosa { background:linear-gradient(135deg,#fce5f4,#fef4fa); }
+.landing-vetcare .landing-story-azul { background:linear-gradient(135deg,#dceefa,#f1f7fd); }
+.landing-vetcare .landing-pill { display:inline-flex;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:800; }
+.landing-vetcare .landing-pill-lila { background:#f0e4fc;color:#6629a7; }
+.landing-vetcare .landing-pill-verde { background:#d9f5e6;color:#087d5b; }
+.landing-vetcare .landing-pill-rosa { background:#fbe3f3;color:#a1238b; }
+.landing-vetcare .landing-pill-azul { background:#e7e8ff;color:#5a43b5; }
+@media(max-width:1050px){.landing-vetcare .landing-hero-art{right:0;width:39%;opacity:.68}}
+@media(max-width:767px){.landing-vetcare .landing-hero-art{width:65%;opacity:.17}.landing-vetcare .landing-hero h1{max-width:100%}}

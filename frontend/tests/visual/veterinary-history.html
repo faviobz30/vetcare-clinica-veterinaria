@@ -1,0 +1,74 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Historial veterinario</title><style>.capture .qa-banner button,.capture .qa-banner output{display:none}</style><body><div id="root"></div><script type="module">
+// Datos sintéticos en memoria. Ninguna operación llega a la API o a PostgreSQL.
+import React,{useState} from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter,Routes,Route} from 'react-router-dom'
+import Shell from '/src/components/Shell.jsx'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import Vacunas from '/src/pages/Vacunas.jsx'
+import HistoriaClinica from '/src/pages/HistoriaClinica.jsx'
+import {api} from '/src/lib/api.js'
+import {antecedentGroups} from '/src/lib/antecedents.js'
+import {limaToday} from '/src/lib/clinicalHistory.js'
+import {vaccineDateLabel} from '/src/lib/ownerHistory.js'
+import '/src/index.css'
+const h=React.createElement,today=limaToday(),date=delta=>{const d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+let role='VETERINARIO',setRole,setView,failNext=false,writes=0
+function auth(value){role=value;const token=['qa',btoa(JSON.stringify({idUsuario:value==='VETERINARIO'?501:601,rol:value,sub:'synthetic@example.invalid',exp:4102444800})),'qa'].join('.');sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role',value);if(setRole)setRole(value)}
+if(new URLSearchParams(location.search).has('captura'))document.documentElement.classList.add('capture')
+auth(new URLSearchParams(location.search).get('role')==='owner'?'PROPIETARIO':'VETERINARIO')
+const pets=[{idMascota:1,idPropietario:1,nombre:'Mora',nombrePropietario:'Ana Herrera',especie:'Canina',raza:'Mestiza',sexo:'Hembra',fechaNacimiento:'2022-05-15',tieneFoto:false},{idMascota:2,idPropietario:1,nombre:'Kiro',nombrePropietario:'Ana Herrera',especie:'Felina',sexo:'Macho',fechaNacimiento:'2025-03-10',tieneFoto:false},{idMascota:3,idPropietario:2,nombre:'Nube',nombrePropietario:'Luis Prado',especie:'Canina',fechaNacimiento:'2024-01-10',tieneFoto:false}]
+const vets=[{idVeterinario:51,nombres:'Elena',apellidos:'Ruiz',especialidad:'Medicina veterinaria'},{idVeterinario:52,nombres:'Martín',apellidos:'Vega',especialidad:'Medicina veterinaria'}]
+const visits=pets.map((p,i)=>({idAtencion:201+i,idHistoria:p.idMascota*10,idVeterinario:51,fechaAtencion:today+'T10:00:00',peso:i===0?12.5:i===1?4.1:9,diagnostico:'Control clínico de prueba',tratamiento:'Indicación clínica sintética'}))
+let rows=[{idVacuna:101,idMascota:1,idVeterinario:51,nombre:'Vacuna antirrábica',proximaDosis:date(15),observaciones:'Traer cartilla de vacunación. Observación sintética de prueba.'},{idVacuna:102,idMascota:1,idVeterinario:52,nombre:'Vacuna séxtuple',fechaAplicacion:date(-90),proximaDosis:date(45),observaciones:'Seguimiento registrado en prueba.'},{idVacuna:103,idMascota:1,idVeterinario:51,idAtencion:201,nombre:'Vacuna aplicada de prueba',fechaAplicacion:date(-10),observaciones:'Observación registrada de prueba.'},{idVacuna:104,idMascota:2,idVeterinario:51,nombre:'Vacuna de Kiro',proximaDosis:date(30)},{idVacuna:105,idMascota:3,idVeterinario:51,nombre:'Vacuna de Nube',proximaDosis:date(20)}]
+const histories=Object.fromEntries(pets.map(p=>[p.idMascota,{idMascota:p.idMascota,idHistoria:p.idMascota*10,fechaApertura:'2026-01-01T09:00:00',antecedentes:{version:0,estadoAlergias:'NO_EVALUADAS',notasMedicas:null}}]))
+const audits=[]
+const dto=v=>({...v,estadoAplicacion:v.fechaAplicacion?'APLICADA':'PROGRAMADA',estadoProximaDosis:!v.proximaDosis?'SIN_PROXIMA_DOSIS':v.proximaDosis<today?'VENCIDA':v.proximaDosis===today?'HOY':'PROGRAMADA'})
+api.defaults.adapter=async config=>{
+ let data;const url=config.url,method=config.method,body=typeof config.data==='string'?JSON.parse(config.data):config.data
+ if(method!=='get'){
+  writes++;await new Promise(r=>setTimeout(r,160))
+  if(failNext){failNext=false;throw {response:{status:409,data:{error:'Conflicto sintético: registro actualizado.'}},config}}
+  if(role!=='VETERINARIO')throw {response:{status:403,data:{error:'Acceso denegado'}},config}
+  if(url.startsWith('/historias-clinicas/')&&url.endsWith('/antecedentes')){const record=Object.values(histories).find(v=>v.idHistoria===Number(url.split('/')[2]));const previous=structuredClone(record.antecedentes);if(body.version!==previous.version)throw {response:{status:409,data:{error:'El expediente cambió mientras editabas.'}},config};const proposed={...body};delete proposed.motivo;delete proposed.idAtencion;for(const [group,definition]of Object.entries(antecedentGroups)){if(definition.keys.some(k=>(previous[k]??null)!==(body[k]??null)))audits.push({id:audits.length+1,idHistoria:record.idHistoria,idMascota:record.idMascota,seccion:group,anterior:Object.fromEntries(definition.keys.map(k=>[k,previous[k]??null])),nuevo:Object.fromEntries(definition.keys.map(k=>[k,body[k]??null])),veterinarioNombre:'Elena Ruiz',fecha:today+'T15:00:00Z',motivo:body.motivo,revision:previous.version+1})}record.antecedentes={...proposed,version:previous.version+1,actualizadoEn:today+'T10:00:00',veterinarioNombre:'Elena Ruiz'};data=record}
+  else if(url==='/vacunas'){const v={...body,idVacuna:Math.max(...rows.map(v=>v.idVacuna))+1};rows.push(v);data=dto(v)}
+  else{const v=rows.find(v=>v.idVacuna===Number(url.split('/')[2]));if(!v)throw Error('Registro inexistente en QA');if(url.endsWith('/aplicar')&&v.fechaAplicacion)throw {response:{status:409,data:{error:'Ya aplicada'}},config};Object.assign(v,body);data=dto(v)}
+ }else if(url==='/usuarios/me')data={idUsuario:role==='VETERINARIO'?501:601,nombres:role==='VETERINARIO'?'Elena':'Ana',apellidos:role==='VETERINARIO'?'Ruiz':'Herrera',rol:role}
+ else if(url==='/veterinarios/me')data=vets[0]
+ else if(url==='/propietarios/me')data={idPropietario:1}
+ else if(url==='/mascotas')data=role==='VETERINARIO'?pets:pets.filter(p=>p.idPropietario===1)
+ else if(/^\/mascotas\/\d+$/.test(url))data=pets.find(p=>p.idMascota===Number(url.split('/').at(-1)))
+ else if(url==='/veterinarios')data=vets
+ else if(url.startsWith('/vacunas/mascota/'))data=rows.filter(v=>v.idMascota===Number(url.split('/').at(-1))).map(dto)
+ else if(url==='/atenciones')data=visits
+ else if(url==='/citas'||url==='/recordatorios')data=[]
+ else if(url.startsWith('/historias-clinicas/mascota/'))data=histories[Number(url.split('/').at(-1))]
+ else if(url.endsWith('/antecedentes/cambios')){const id=Number(url.split('/')[2]),list=audits.filter(a=>a.idHistoria===id&&(!config.params.seccion||a.seccion===config.params.seccion)).sort((a,b)=>b.revision-a.revision),page=config.params.pagina,size=config.params.size;data={items:list.slice(page*size,(page+1)*size).map(a=>({...a,motivo:role==='PROPIETARIO'?null:a.motivo})),total:list.length,pagina:page,totalPaginas:Math.ceil(list.length/size)}}
+ else if(/^\/historias-clinicas\/\d+$/.test(url))data=Object.values(histories).find(v=>v.idHistoria===Number(url.split('/').at(-1)))
+ else if(/^\/atenciones\/\d+$/.test(url))data=visits.find(v=>v.idAtencion===Number(url.split('/').at(-1)))
+ if(data===undefined)throw {response:{status:404,data:{error:'No disponible en QA'}},config}
+ return {data:structuredClone(data),status:200,statusText:'OK',headers:{},config}
+}
+
+function App(){const [identity,update]=useState(role);setRole=update;return h(AuthProvider,{key:identity},h(MemoryRouter,{initialEntries:['/panel/historias']},h('div',null,h('div',{className:'qa-banner',style:{padding:12,fontSize:12,color:'#6B7280'}},'PRUEBAS AISLADAS · Datos sintéticos · Sin API ni PostgreSQL',h('button',{onClick:()=>auth(role==='VETERINARIO'?'PROPIETARIO':'VETERINARIO'),style:{marginLeft:15}},'Cambiar rol'),h('button',{id:'run',onClick:run,style:{marginLeft:15}},'Comprobar flujos'),h('button',{onClick:()=>{failNext=true},style:{marginLeft:15}},'Simular error'),h('output',{id:'result'})),h(Routes,null,h(Route,{element:h(Shell)},h(Route,{path:'/panel/historias',element:h(HistoriaClinica)}),h(Route,{path:'/panel/vacunas',element:h(Vacunas)}))))))}
+const wait=async pred=>{for(let i=0;i<250;i++){if(pred())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+const btn=(name,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===name)
+function fill(node,value){const proto=node.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}))}
+const field=label=>[...document.querySelectorAll('[role=dialog] label')].find(l=>l.textContent.includes(label))?.querySelector('textarea,input')
+async function tab(name){btn(name).click();await wait(()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent===name)}
+async function run(){let passed=[];const check=(ok,label)=>{if(!ok)throw Error(label);passed.push(label)};try{
+ await wait(()=>btn('Resumen'));check(document.querySelectorAll('[role=tab]').length===3,'Tres pestañas')
+ await tab('Antecedentes');check(document.querySelectorAll('.owner-antecedents-grid button').length===4,'Cuatro editores')
+ const edits=[['Editar alergias','Observaciones de alergias','Evaluación de prueba\nCon acentos áéíóúñ','alergiasObservaciones'],['Editar antecedentes médicos','Enfermedades previas','Seguimiento de prueba\nSin datos reales','enfermedadesRelevantes'],['Editar cirugías y procedimientos','Cirugías y procedimientos anteriores','Procedimiento documentado\nPrueba aislada','cirugiasPrevias'],['Editar cuidados y observaciones','Cuidados y observaciones importantes','Cuidados de prueba\nLínea dos íntegra','notasMedicas']]
+ for(const [label,key,value,property] of edits){document.querySelector(`button[aria-label="${label}"]`).click();await wait(()=>field(key));fill(field(key),value);await new Promise(r=>setTimeout(r,0));const n=writes;btn('Guardar cambios').click();btn('Guardando...')?.click();await wait(()=>!document.querySelector('[role=dialog]'));check(writes===n+1,'Un envío: '+label);check(histories[1].antecedentes[property]===value,'Persistencia simulada: '+property)}
+ document.querySelector('button[aria-label="Editar cuidados y observaciones"]').click();await wait(()=>field('Cuidados'));fill(field('Cuidados'),'No guardar');const n=writes;btn('Cancelar').click();await wait(()=>!document.querySelector('[role=dialog]'));check(writes===n,'Cancelar sin escrituras')
+ document.querySelector('button[aria-label="Editar cuidados y observaciones"]').click();await wait(()=>field('Cuidados'));fill(field('Cuidados'),'Contenido conservado tras error');await new Promise(r=>setTimeout(r,0));fill(field('Motivo de la corrección'),'Corrección sintética para probar conflicto');await new Promise(r=>setTimeout(r,0));failNext=true;btn('Guardar cambios').click();await wait(()=>document.querySelector('[role=dialog] [role=alert]'));check(field('Cuidados').value==='Contenido conservado tras error','Error conserva formulario');btn('Cancelar').click();await wait(()=>!document.querySelector('[role=dialog]'))
+ btn('Ver historial de cambios').click();await wait(()=>document.querySelectorAll('.antecedent-changes-content li').length===4);check(true,'Cuatro secciones con eventos separados');document.querySelector('.antecedent-changes-content details summary').click();check(document.querySelector('.antecedent-changes-content').textContent.includes('Anterior')&&document.querySelector('.antecedent-changes-content').textContent.includes('Nuevo'),'Comparación anterior y nueva');check(document.querySelector('.antecedent-changes-content').textContent.includes('Elena Ruiz'),'Autor y fecha en historial');
+ await tab('Resumen');check(document.querySelector('.owner-summary-important').textContent.includes('Cuidados de prueba'),'Resumen actualizado')
+ await tab('Vacunas');check(!![...document.querySelectorAll('a')].find(a=>a.textContent.includes('Gestionar vacunas')),'Gestión única enlazada');check(document.querySelector('[role=tabpanel]').textContent.includes('Vacuna antirrábica'),'Vacunas del paciente')
+ auth('PROPIETARIO');await wait(()=>document.querySelector('.owner-history-heading p')?.textContent==='El expediente y la evolución de salud de tus mascotas.');await tab('Antecedentes');check(!document.querySelector('.owner-antecedents-grid button'),'Propietario solo lectura');btn('Ver historial de cambios').click();await wait(()=>document.querySelectorAll('.antecedent-changes-content li').length===4);check(true,'Propietario consulta historial sin editar');check(document.querySelector('[role=tabpanel]').textContent.includes('Línea dos íntegra'),'Propietario ve cambio');check(document.querySelector('[role=tabpanel]').textContent.includes('Procedimiento documentado'),'Propietario ve cirugías')
+ auth('VETERINARIO');await wait(()=>document.querySelector('.vet-history'));await tab('Resumen');document.querySelector('[aria-label="Seleccionar paciente del expediente"]').click();await wait(()=>document.querySelector('[role=option]'));[...document.querySelectorAll('[role=option]')].find(n=>n.textContent==='Kiro').click();await wait(()=>document.querySelector('.owner-history-identity h2')?.textContent==='Kiro');check(!document.querySelector('.owner-history').textContent.includes('Línea dos íntegra'),'Cambio no mezcla pacientes');const link=[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Gestionar vacunas'));link.click();await wait(()=>document.querySelector('.vax-page'));check(document.querySelector('[aria-label="Paciente"]').textContent.includes('Kiro'),'Gestionar conserva paciente');check(!document.querySelector('.vax-page').textContent.includes('Vacuna antirrábica'),'Gestión sin datos ajenos');
+ document.getElementById('result').textContent=passed.length+' verificaciones correctas: '+passed.join(' · ')
+ }catch(error){document.getElementById('result').textContent='FALLO: '+error.message+' · '+passed.join(' · ');throw error}}
+createRoot(document.getElementById('root')).render(h(App))
+</script></body></html>

@@ -1,0 +1,88 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Vacunas</title><body><div id="root"></div><script type="module">
+// Datos sintéticos en memoria. Ninguna operación llega a la API o a PostgreSQL.
+import React,{useState} from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter,Routes,Route} from 'react-router-dom'
+import Shell from '/src/components/Shell.jsx'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import Vacunas from '/src/pages/Vacunas.jsx'
+import HistoriaClinica from '/src/pages/HistoriaClinica.jsx'
+import {api} from '/src/lib/api.js'
+import {limaToday} from '/src/lib/clinicalHistory.js'
+import {vaccineDateLabel} from '/src/lib/ownerHistory.js'
+import '/src/index.css'
+const h=React.createElement,today=limaToday(),date=delta=>{const d=new Date(today+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+delta);return d.toISOString().slice(0,10)}
+let role='VETERINARIO',setRole,setView,failNext=false,writes=0
+function auth(value){role=value;const token=['qa',btoa(JSON.stringify({idUsuario:value==='VETERINARIO'?501:601,rol:value,sub:'synthetic@example.invalid',exp:4102444800})),'qa'].join('.');sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role',value);if(setRole)setRole(value)}
+auth(new URLSearchParams(location.search).get('role')==='owner'?'PROPIETARIO':'VETERINARIO')
+const pets=[{idMascota:1,idPropietario:1,nombre:'Mora',nombrePropietario:'Ana Herrera',especie:'Canina',raza:'Mestiza',sexo:'Hembra',fechaNacimiento:'2022-05-15',tieneFoto:false},{idMascota:2,idPropietario:1,nombre:'Kiro',nombrePropietario:'Ana Herrera',especie:'Felina',sexo:'Macho',fechaNacimiento:'2025-03-10',tieneFoto:false},{idMascota:3,idPropietario:2,nombre:'Nube',nombrePropietario:'Luis Prado',especie:'Canina',fechaNacimiento:'2024-01-10',tieneFoto:false}]
+const vets=[{idVeterinario:51,nombres:'Elena',apellidos:'Ruiz',especialidad:'Medicina veterinaria'},{idVeterinario:52,nombres:'Martín',apellidos:'Vega',especialidad:'Medicina veterinaria'}]
+const visits=pets.map((p,i)=>({idAtencion:201+i,idHistoria:p.idMascota*10,idVeterinario:51,fechaAtencion:today+'T10:00:00',peso:i===0?12.5:i===1?4.1:9,diagnostico:'Control clínico de prueba',tratamiento:'Indicación clínica sintética'}))
+let rows=[{idVacuna:101,idMascota:1,idVeterinario:51,nombre:'Vacuna antirrábica',proximaDosis:date(15),observaciones:'Traer cartilla de vacunación. Observación sintética de prueba.'},{idVacuna:102,idMascota:1,idVeterinario:52,nombre:'Vacuna séxtuple',fechaAplicacion:date(-90),proximaDosis:date(45),observaciones:'Seguimiento registrado en prueba.'},{idVacuna:103,idMascota:1,idVeterinario:51,idAtencion:201,nombre:'Vacuna aplicada de prueba',fechaAplicacion:date(-10),observaciones:'Observación registrada de prueba.'},{idVacuna:104,idMascota:2,idVeterinario:51,nombre:'Vacuna de Kiro',proximaDosis:date(30)},{idVacuna:105,idMascota:3,idVeterinario:51,nombre:'Vacuna de Nube',proximaDosis:date(20)}]
+const dto=v=>({...v,estadoAplicacion:v.fechaAplicacion?'APLICADA':'PROGRAMADA',estadoProximaDosis:!v.proximaDosis?'SIN_PROXIMA_DOSIS':v.proximaDosis<today?'VENCIDA':v.proximaDosis===today?'HOY':'PROGRAMADA'})
+api.defaults.adapter=async config=>{
+ let data;const url=config.url,method=config.method,body=typeof config.data==='string'?JSON.parse(config.data):config.data
+ if(method!=='get'){
+  writes++;await new Promise(r=>setTimeout(r,160))
+  if(failNext){failNext=false;throw {response:{status:409,data:{error:'Conflicto sintético: registro actualizado.'}},config}}
+  if(role!=='VETERINARIO')throw {response:{status:403,data:{error:'Acceso denegado'}},config}
+  if(url==='/vacunas'){const v={...body,idVacuna:Math.max(...rows.map(v=>v.idVacuna))+1};rows.push(v);data=dto(v)}
+  else{const v=rows.find(v=>v.idVacuna===Number(url.split('/')[2]));if(!v)throw Error('Registro inexistente en QA');if(url.endsWith('/aplicar')&&v.fechaAplicacion)throw {response:{status:409,data:{error:'Ya aplicada'}},config};Object.assign(v,body);data=dto(v)}
+ }else if(url==='/usuarios/me')data={idUsuario:role==='VETERINARIO'?501:601,nombres:role==='VETERINARIO'?'Elena':'Ana',apellidos:role==='VETERINARIO'?'Ruiz':'Herrera',rol:role}
+ else if(url==='/veterinarios/me')data=vets[0]
+ else if(url==='/propietarios/me')data={idPropietario:1}
+ else if(url==='/mascotas')data=role==='VETERINARIO'?pets:pets.filter(p=>p.idPropietario===1)
+ else if(/^\/mascotas\/\d+$/.test(url))data=pets.find(p=>p.idMascota===Number(url.split('/').at(-1)))
+ else if(url==='/veterinarios')data=vets
+ else if(url.startsWith('/vacunas/mascota/'))data=rows.filter(v=>v.idMascota===Number(url.split('/').at(-1))).map(dto)
+ else if(url==='/atenciones')data=visits
+ else if(url==='/citas'||url==='/recordatorios')data=[]
+ else if(url.startsWith('/historias-clinicas/mascota/')){const id=Number(url.split('/').at(-1));data={idMascota:id,idHistoria:id*10,fechaApertura:'2026-01-01T09:00:00',antecedentes:{estadoAlergias:'NO_EVALUADAS',alertasMedicas:id===1?'Advertencia registrada en datos de prueba.':null}}}
+ if(data===undefined)throw {response:{status:404,data:{error:'No disponible en QA'}},config}
+ return {data:structuredClone(data),status:200,statusText:'OK',headers:{},config}
+}
+const wait=async predicate=>{for(let i=0;i<250;i++){if(predicate())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+const button=(text,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text)
+const row=(name,applied=false)=>[...document.querySelectorAll('.vax-record')].find(r=>r.querySelector('h3')?.textContent===name&&(!applied||r.querySelector('.vax-status.applied')))
+const field=label=>[...document.querySelectorAll('[role=dialog] label')].find(l=>l.querySelector('span')?.textContent===label)?.querySelector('input,textarea')
+function fill(node,value){const proto=node.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}));node.dispatchEvent(new Event('change',{bubbles:true}))}
+async function choose(label,part){document.querySelector(`button[aria-label="${label}"]`).click();await wait(()=>document.querySelector('[role=option]'));[...document.querySelectorAll('[role=option]')].find(n=>n.textContent.includes(part)).click();await new Promise(r=>setTimeout(r,0))}
+async function checkUI(){const passed=[],output=document.getElementById('qa-result'),assert=(ok,label)=>{if(!ok)throw Error(label);passed.push(label)}
+ try{
+ auth('VETERINARIO');setView('vacunas');await wait(()=>button('Programar vacuna'))
+ assert(!!button('Registrar aplicación'),'Dos acciones veterinarias reales')
+ await choose('Propietario del paciente','Luis Prado');await wait(()=>row('Vacuna de Nube'));assert(document.querySelector('.vax-pet-select').textContent.includes('Nube'),'Propietario selecciona su paciente autorizado')
+ await choose('Paciente','Mora');await wait(()=>row('Vacuna antirrábica'));assert(document.querySelector('[aria-label="Propietario del paciente"]').textContent.includes('Ana Herrera'),'Paciente conserva propietario coherente')
+ fill(document.querySelector('[aria-label="Desde"]'),date(20));await new Promise(r=>setTimeout(r,0));await wait(()=>!row('Vacuna antirrábica'));assert(!!row('Vacuna séxtuple'),'Filtro por fechas respeta los registros reales')
+ fill(document.querySelector('[aria-label="Desde"]'),'');await new Promise(r=>setTimeout(r,0));await wait(()=>row('Vacuna antirrábica'))
+ button('Programar vacuna').click();await wait(()=>document.querySelector('[role=dialog]'))
+ fill(field('Nombre de vacuna *'),'Vacuna de demostración aislada');fill(field('Fecha programada *'),date(25));fill(field('Observaciones e indicaciones (opcional)'),'Observación de programación\nTexto con acentos áéíóúñ.');await new Promise(r=>setTimeout(r,0))
+ const before=writes;button('Guardar',document.querySelector('[role=dialog]')).click();button('Guardando...',document.querySelector('[role=dialog]'))?.click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>row('Vacuna de demostración aislada'))
+ assert(writes===before+1,'Doble envío bloqueado');const created=rows.find(v=>v.nombre==='Vacuna de demostración aislada'),id=created.idVacuna
+ assert(!!created,'Programación actualiza listado tras respuesta')
+ button('Editar',row(created.nombre)).click();await wait(()=>field('Nombre de vacuna *'));fill(field('Nombre de vacuna *'),'Vacuna de demostración revisada');await new Promise(r=>setTimeout(r,0));button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>row('Vacuna de demostración revisada'));assert(rows.find(v=>v.idVacuna===id).nombre==='Vacuna de demostración revisada','Edición mantiene ID')
+ button('Reprogramar',row('Vacuna de demostración revisada')).click();await wait(()=>field('Fecha programada *'));fill(field('Fecha programada *'),date(40));await new Promise(r=>setTimeout(r,0));button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>row('Vacuna de demostración revisada'));assert(rows.find(v=>v.idVacuna===id).proximaDosis===date(40),'Reprogramación actualiza fecha')
+ const count=rows.length;button('Marcar como aplicada',row('Vacuna de demostración revisada')).click();await wait(()=>document.querySelector('[role=dialog]'));await choose('Atención clínica del paciente *','Control clínico');fill(field('Observaciones e indicaciones (opcional)'),'Aplicación de prueba\nObservación íntegra.');await new Promise(r=>setTimeout(r,0));button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>rows.find(v=>v.idVacuna===id).fechaAplicacion===today);await wait(()=>row('Vacuna de demostración revisada'))
+ assert(rows.length===count,'Aplicación reutiliza programación sin duplicar');assert(!!button('Editar nota',row('Vacuna de demostración revisada',true)),'Aplicada permite solo editar nota')
+ button('Editar nota',row('Vacuna de demostración revisada',true)).click();await wait(()=>field('Observaciones e indicaciones (opcional)'));fill(field('Observaciones e indicaciones (opcional)'),'Nota final de prueba\nAcentos: áéíóúñ.');await new Promise(r=>setTimeout(r,0));button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>row('Vacuna de demostración revisada'));assert(rows.find(v=>v.idVacuna===id).fechaAplicacion===today,'Editar nota preserva fecha y estado')
+ auth('PROPIETARIO');await wait(()=>document.querySelector('.vax-page.owner'));await wait(()=>row('Vacuna de demostración revisada'));assert(!button('Programar vacuna')&&!button('Registrar aplicación')&&!button('Editar nota'),'Propietario sin acciones de escritura')
+ row('Vacuna de demostración revisada').querySelector('.vax-link').click();await wait(()=>row('Vacuna de demostración revisada').textContent.includes('Nota final de prueba'));assert(row('Vacuna de demostración revisada').textContent.includes('áéíóúñ'),'Propietario consulta misma nota')
+ document.querySelector('.vax-calendar button[aria-current=date]').click();await wait(()=>document.querySelector('.vax-day-events')?.textContent.includes('Vacuna de demostración revisada'));assert(true,'Calendario refleja aplicación')
+ const month=document.querySelector('.vax-month strong').textContent;document.querySelector('[aria-label="Mes siguiente"]').click();await wait(()=>document.querySelector('.vax-month strong').textContent!==month);assert(true,'Calendario navega entre meses')
+ setView('historia');await wait(()=>document.querySelector('.owner-history-identity'));[...document.querySelectorAll('[role=tab]')].find(n=>n.textContent==='Vacunas').click();await wait(()=>document.querySelector('[role=tabpanel]')?.textContent.includes('Vacuna de demostración revisada'));assert(document.querySelector('[role=tabpanel]').textContent.includes('Nota final de prueba'),'Historial usa el mismo registro actualizado')
+ setView('vacunas');await wait(()=>row('Vacuna de demostración revisada'));await choose('Mascota','Kiro');await wait(()=>row('Vacuna de Kiro'));assert(!row('Vacuna de demostración revisada'),'Cambio de mascota no mezcla registros')
+ auth('VETERINARIO');await wait(()=>button('Programar vacuna'));failNext=true;button('Programar vacuna').click();await wait(()=>field('Nombre de vacuna *'));fill(field('Nombre de vacuna *'),'Solicitud rechazada de prueba');fill(field('Fecha programada *'),date(20));await new Promise(r=>setTimeout(r,0));button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>document.querySelector('[role=dialog] [role=alert]'));assert(!!document.querySelector('[role=dialog]'),'Error conserva formulario y datos');button('Cancelar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]'))
+ const directBefore=rows.length;button('Registrar aplicación').click();await wait(()=>document.querySelector('[role=dialog]'));fill(field('Nombre (solo aplicación directa)'),'Aplicación directa aislada');await choose('Atención clínica del paciente *','Control clínico');await new Promise(r=>setTimeout(r,0));button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>row('Aplicación directa aislada',true));assert(rows.length===directBefore+1,'Registrar aplicación directa crea un único registro')
+ const planned=rows.find(v=>v.idVacuna===101),oldNote=planned.observaciones,beforeConfirm=rows.length;button('Registrar aplicación').click();await wait(()=>document.querySelector('[role=dialog]'));await choose('Dosis programada o aplicación directa *','Vacuna antirrábica');await choose('Atención clínica del paciente *','Control clínico');button('Guardar',document.querySelector('[role=dialog]')).click();await wait(()=>!document.querySelector('[role=dialog]')&&!document.querySelector('.vax-loading'));await wait(()=>row('Vacuna antirrábica',true));assert(rows.length===beforeConfirm&&planned.observaciones===oldNote,'Registrar aplicación existente reutiliza ID y conserva nota no editada')
+ output.textContent=`APROBADO: ${passed.length} comprobaciones UI · ${passed.join(' · ')}`
+ }catch(error){output.textContent='FALLO: '+error.message;throw error}
+}
+function QA(){
+ const[value,updateRole]=useState(role),[view,updateView]=useState('vacunas');setRole=updateRole;setView=updateView
+ const shell=new URLSearchParams(location.search).has('shell')
+ const panel=h(React.Fragment,null,h('p',{style:{fontSize:'11px',color:'#6B7280',marginBottom:'12px'}},'PRUEBAS AISLADAS · Datos sintéticos · Sin API ni PostgreSQL'),h(view==='historia'?HistoriaClinica:Vacunas))
+ return h(MemoryRouter,{initialEntries:[shell?'/panel/vacunas':'/']},h('div',{className:'qa-controls',style:{padding:'8px',fontSize:'12px'}},'QA AISLADA · Datos sintéticos en memoria · Sin API ni PostgreSQL ',h('button',{onClick:checkUI},'Ejecutar pruebas UI'),h('button',{onClick:()=>auth('VETERINARIO')},'Vista veterinario'),h('button',{onClick:()=>auth('PROPIETARIO')},'Vista propietario'),h('p',{id:'qa-result'},'Pendiente')),h(AuthProvider,{key:value},shell?h(Routes,null,h(Route,{element:h(Shell)},h(Route,{path:'*',element:panel}))):h('main',{style:{maxWidth:'1380px',margin:'auto',padding:'24px'}},panel)))
+}
+if(new URLSearchParams(location.search).has('captura')){const style=document.createElement('style');style.textContent='.qa-controls{display:none}';document.head.append(style)}
+createRoot(document.getElementById('root')).render(h(QA))
+</script></body></html>

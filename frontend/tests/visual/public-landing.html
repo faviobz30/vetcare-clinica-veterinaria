@@ -1,0 +1,56 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QA aislada · Portada VetCare</title><body><div id="root"></div><script type="module">
+// Solo QA: sin escrituras, API real, credenciales ni historias clínicas.
+import React,{useState} from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter,Routes,Route,Link} from 'react-router-dom'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import Inicio from '/src/pages/Inicio.jsx'
+import Login from '/src/pages/Login.jsx'
+import Registro from '/src/pages/Registro.jsx'
+import {api} from '/src/lib/api.js'
+import '/src/index.css'
+const h=React.createElement
+sessionStorage.removeItem('vetcare_token');sessionStorage.removeItem('vetcare_role')
+const stories=Array.from({length:4},(_,i)=>({id:i+1,titulo:'Publicación sintética QA '+(i+1),contenido:'Momento compartido en una prueba aislada.\nEste contenido no es un testimonio real.\nSe conserva el texto completo.',autor:'Autor de QA '+(i+1),mascota:'Mascota de QA '+(i+1),fechaCreacion:`2026-10-${20+i}T10:00:00`,foto:false,diagnostico:'MARCADOR_CLINICO_PRIVADO'}))
+let mode='three',setScenario
+api.defaults.adapter=async config=>{
+ if(config.method!=='get'||config.url!=='/publicaciones')throw Error('Solicitud bloqueada en QA')
+ if(mode==='error')throw {response:{status:503,data:{error:'Error sintético'}},config}
+ return {data:mode==='empty'?[]:mode==='one'?stories.slice(0,1):stories,status:200,statusText:'OK',headers:{},config}
+}
+const waitFor=async p=>{for(let i=0;i<180;i++){if(p())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+async function checkUI(){
+ const passed=[],result=document.getElementById('qa-result'),assert=(ok,label)=>{if(!ok)throw Error(label);passed.push(label)}
+ try{
+ setScenario('three');await new Promise(r=>setTimeout(r,0));await waitFor(()=>document.querySelectorAll('.public-story').length===3)
+ assert(document.querySelectorAll('.public-four-grid')[0].children.length===4,'Cuatro servicios')
+ assert(document.querySelectorAll('.public-four-grid')[1].children.length===4,'Cuatro pasos')
+ assert(document.querySelectorAll('.public-story').length===3,'Máximo tres historias')
+ assert(!document.querySelector('.public-vetcare').textContent.includes('MARCADOR_CLINICO_PRIVADO'),'Sin datos clínicos privados')
+ for(const id of ['servicios','como-funciona','historias','inicio']){
+ document.querySelector(`.public-header a[href="#${id}"]`).click();await waitFor(()=>document.activeElement?.id===id)
+ assert(location.hash==='#'+id,'Navegación interna '+id)
+ }
+ assert([...document.querySelectorAll('.public-hero-actions a,.public-prevention a')].filter(a=>a.textContent.includes('Solicitar cita')).every(a=>a.getAttribute('href')==='/login'),'CTA de citas anónimo al login')
+ document.querySelector('.public-hero-actions a').click();await waitFor(()=>document.querySelector('input[type=email]'))
+ assert([...document.querySelectorAll('h2')].some(n=>n.textContent.includes('Bienvenido a VetCare')),'Login existente accesible')
+ document.getElementById('qa-home').click();await waitFor(()=>document.querySelector('.public-vetcare'))
+ document.querySelector('.public-auth a[href="/registro"]').click();await waitFor(()=>[...document.querySelectorAll('h2')].some(n=>n.textContent==='Crear mi cuenta'))
+ assert(true,'Registro existente accesible');document.getElementById('qa-home').click();await waitFor(()=>document.querySelector('.public-vetcare'))
+ setScenario('one');await waitFor(()=>document.querySelectorAll('.public-story').length===1)
+ assert(document.querySelector('.public-stories').classList.contains('count-1'),'Una historia con ancho adaptable')
+ document.querySelector('.public-story summary').click();await waitFor(()=>document.querySelector('.public-story details').open)
+ assert(document.querySelector('.public-story-full').textContent.includes('\n'),'Detalle conserva texto íntegro y saltos')
+ setScenario('empty');await waitFor(()=>document.querySelector('.public-stories-message')?.textContent.includes('Todavía'))
+ assert(!document.querySelector('.public-story'),'Vacío sin publicaciones ficticias')
+ setScenario('error');await waitFor(()=>document.querySelector('.public-stories [role=alert]'))
+ assert(!!document.querySelector('.public-text-button'),'Error visible con reintento')
+ mode='three';document.querySelector('.public-text-button').click();await waitFor(()=>document.querySelectorAll('.public-story').length===3)
+ assert(true,'Reintento recupera publicaciones')
+ result.textContent=`APROBADO: ${passed.length} comprobaciones · ${passed.join(' · ')}`
+ }catch(error){result.textContent='FALLO: '+error.message;throw error}
+}
+function QA(){const[version,setVersion]=useState(0);setScenario=value=>{mode=value;setVersion(v=>v+1)};return h(MemoryRouter,null,h(AuthProvider,null,h('div',{className:'qa-controls',style:{padding:'8px',fontSize:'12px',background:'white'}},'QA AISLADA · Datos sintéticos · Sin API ni PostgreSQL ',h('button',{onClick:checkUI},'Ejecutar pruebas UI'),h(Link,{to:'/',id:'qa-home',style:{marginLeft:20}},'Volver a portada QA'),h('p',{id:'qa-result'},'Pendiente')),h(Routes,null,h(Route,{path:'/',element:h(Inicio,{key:version})}),h(Route,{path:'/login',element:h(Login)}),h(Route,{path:'/registro',element:h(Registro)}))))}
+if(new URLSearchParams(location.search).has('captura')){const s=document.createElement('style');s.textContent='.qa-controls{display:none}';document.head.append(s)}
+createRoot(document.getElementById('root')).render(h(QA))
+</script></body></html>

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QA aislada · Atenciones VetCare</title><body><div id="root"></div><script type="module">
+// Fixture exclusiva de QA visual: no llama a la API ni persiste información.
+import React, {useState} from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter} from 'react-router-dom'
+import {AttentionCard} from '/src/pages/Atenciones.jsx'
+import AttentionDetail from '/src/components/AttentionDetail.jsx'
+import '/src/index.css'
+const h = React.createElement
+const row = {
+  attention: {idAtencion: 1, idHistoria: 1, fechaAtencion: '2026-10-20T18:14:00', diagnostico: 'Diagnóstico sintético para comprobar el diseño y el ajuste de textos largos sin modificar ni resumir su contenido clínico. '.repeat(4), sintoma: 'Síntomas sintéticos de prueba.\nSegunda línea conservada.', tratamiento: 'Primera indicación sintética.\nSegunda indicación sintética.\nTercera indicación sintética.', observacion: 'Observaciones sintéticas para verificar legibilidad, saltos de línea y contenido extenso.\n'.repeat(6), peso: 12.5},
+  pet: {idMascota: 1, nombre: 'Paciente QA', especie: 'Canino', raza: 'Raza de prueba', fechaNacimiento: '2023-07-20'},
+  vet: {especialidad: 'Especialidad de prueba', nroColegiatura: 'QA-000'}, vetName: 'Profesional QA',
+}
+function QA() {
+  const [open, setOpen] = useState(false)
+  return h(MemoryRouter, null, h('div', {className:'atenciones-page',style:{padding:'28px',maxWidth:'1450px',margin:'auto'}},
+    h('p',{style:{fontSize:'12px',marginBottom:'14px'}},'QA visual aislada · Datos sintéticos · Sin API ni base de datos'),
+    h('header',{className:'attention-page-header'},h('div',null,h('h1',null,'Atenciones clínicas'),h('p',null,'Revisa el resumen médico de las atenciones de tus mascotas.'))),
+    h('div',{className:'attention-toolbar'},h('div',{className:'attention-pet-chips'},h('button',{className:'is-selected'},'Todas'),h('button',null,'Paciente QA')),h('label',{className:'attention-sort'},'Más recientes primero')),
+    h('div',{className:'attention-list'},[1,2,3,4].map(id=>h(AttentionCard,{key:id,row:{...row,attention:{...row.attention,idAtencion:id}},permissions:{write:false,remove:false},onDetail:()=>setOpen(true)}))),
+    open && h(AttentionDetail,{state:{loading:false,error:''},row,onClose:()=>setOpen(false),onRetry:()=>{}})))
+}
+createRoot(document.getElementById('root')).render(h(QA))
+</script></body></html>

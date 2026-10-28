@@ -1,0 +1,46 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Inicio VetCare</title><body style="background:#F8F7FC"><div id="root"></div><script type="module">
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter} from 'react-router-dom'
+import Home from '/src/pages/Home.jsx'
+import {AuthProvider,useAuth} from '/src/contexts/AuthContext.jsx'
+import {api} from '/src/lib/api.js'
+import '/src/index.css'
+const h=React.createElement,owner=new URLSearchParams(location.search).get('role')==='owner',role=owner?'PROPIETARIO':'VETERINARIO',name=owner?'Valeria':'Sofía';let treatment=null,writes=0
+sessionStorage.setItem('vetcare_token',['qa',btoa(JSON.stringify({idUsuario:501,rol:role,exp:4102444800})),'qa'].join('.'));sessionStorage.setItem('vetcare_role',role)
+const stamp=new Date(Date.now()+86400000).toISOString().slice(0,19)
+const pet={idMascota:1,idPropietario:1,nombre:'Paciente sintético',especie:'Canina',tieneFoto:false}
+api.defaults.adapter=async config=>{
+ if(config.method!=='get'){writes++;throw Error('QA: escritura bloqueada')}
+ let data
+ if(config.url==='/usuarios/me')data={idUsuario:501,nombres:name,apellidos:'Prueba',rol:role,correo:'qa@example.invalid'}
+ else if(config.url==='/veterinarios/me')data={idVeterinario:51,nombres:name,tratamientoProfesional:treatment}
+ else if(config.url==='/propietarios/me')data={idPropietario:1}
+ else if(config.url==='/usuarios/me/foto')throw {response:{status:404}}
+ else if(config.url==='/citas')data=[{idCita:1,idMascota:1,idVeterinario:51,fechaCita:stamp,estado:'PENDIENTE',motivoCita:'Consulta sintética'}]
+ else if(config.url==='/mascotas')data=[pet]
+ else if(config.url==='/veterinarios')data=[]
+ else if(config.url==='/atenciones')data=[]
+ else throw Error('QA: endpoint no previsto')
+ return {data,status:200,statusText:'OK',config,headers:{}}
+}
+function Controls(){const {refreshProfile}=useAuth();return h('div',{className:'qa-controls'},h('p',null,'QA AISLADA · Datos sintéticos · Sin PostgreSQL'),!owner&&h('div',null,...[[null,'Sin tratamiento'],['Dr.','Dr.'],['Dra.','Dra.']].map(([v,label])=>h('button',{className:'btn btn-ghost',key:label,onClick:async()=>{treatment=v;await refreshProfile()}},label))),h('button',{className:'btn btn-ghost',onClick:run},'Comprobar Inicio'),h('output',{id:'qa-result'}))}
+const wait=async fn=>{for(let i=0;i<150;i++){if(fn())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+async function run(){const checks=[],check=(v,label)=>{if(!v)throw Error(label);checks.push(label)};try{
+ await wait(()=>document.querySelector('.home-top-stat')?.textContent.includes('1')&&!document.querySelector('.home-top-stat')?.textContent.includes('…'))
+ check(document.querySelectorAll('.home-top-stat').length===4,'Cuatro indicadores');check(!document.querySelector('.home-welcome').textContent.includes('Horarios de Lima'),'Sin frase técnica');check(document.querySelector('.home-welcome h1').textContent.includes(name),'Nombre del perfil')
+ const lower=document.querySelector('.home-welcome').parentElement.lastElementChild,original=lower.innerHTML
+ const hrefs=[...lower.querySelectorAll('a')].map(a=>a.getAttribute('href'));check(hrefs.every(h=>h.startsWith('/panel/')),'Enlaces internos existentes')
+ check([...document.querySelectorAll('.home-top-stat')].every((n,i)=>n.className.includes(['lavender','cream','blue','mint'][i])),'Orden de colores')
+ if(owner){check(document.querySelector('.home-welcome-photo').alt==='Perrito y gatito de VetCare','Imagen original del propietario');check(document.querySelector('.home-welcome-slogan').textContent.includes('Pequeñas'),'Slogan conservado');check(lower.textContent.includes('Acciones rápidas')&&lower.textContent.includes('Mis pendientes'),'Parte inferior propietario')}else{
+  check(document.querySelector('.home-welcome h1').textContent==='¡Hola, Sofía!','Neutro sin inferir título');const b=text=>[...document.querySelectorAll('.qa-controls button')].find(n=>n.textContent===text)
+  b('Dr.').click();await wait(()=>document.querySelector('.home-welcome h1').textContent==='¡Hola, Dr. Sofía!');check(true,'Dr. desde respuesta actualizada')
+  b('Dra.').click();await wait(()=>document.querySelector('.home-welcome h1').textContent==='¡Hola, Dra. Sofía!');check(true,'Dra. desde respuesta actualizada')
+  b('Sin tratamiento').click();await wait(()=>document.querySelector('.home-welcome h1').textContent==='¡Hola, Sofía!');check(true,'Sin tratamiento restaura neutro');check(document.querySelector('.home-welcome-photo').alt==='Mascotas en cuidado veterinario','Imagen neutra mientras faltan originales');check(lower.textContent.includes('Mis tareas de hoy'),'Parte inferior veterinario')
+ }
+ check(lower.innerHTML===original,'Parte inferior inalterada');check(writes===0,'Sin escrituras');check(document.documentElement.scrollWidth<=innerWidth,'Sin desbordamiento');document.getElementById('qa-result').textContent=checks.length+' verificaciones correctas · '+checks.join(' · ')
+}catch(error){document.getElementById('qa-result').textContent='FALLO: '+error.message+' · '+checks.join(' · ')}}
+if(new URLSearchParams(location.search).has('captura')){const style=document.createElement('style');style.textContent='.qa-controls{display:none}';document.head.append(style)}
+createRoot(document.getElementById('root')).render(h(AuthProvider,null,h(MemoryRouter,null,h('main',{style:{maxWidth:1300,margin:'24px auto',padding:20}},h(Controls),h(Home)))))
+if(new URLSearchParams(location.search).has('auto')){await wait(()=>document.querySelector('.qa-controls button'));[...document.querySelectorAll('.qa-controls button')].find(b=>b.textContent==='Comprobar Inicio').click()}
+</script></body></html>
