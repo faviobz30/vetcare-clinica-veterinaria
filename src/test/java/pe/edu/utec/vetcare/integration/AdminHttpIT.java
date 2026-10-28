@@ -73,18 +73,37 @@ class AdminHttpIT extends PostgresIntegrationSupport {
   mvc.perform(patch("/api/usuarios/me").header("Authorization",admin).contentType(MediaType.APPLICATION_JSON).content("{\"nombres\":\"Otro\",\"idRol\":2}")).andExpect(status().isBadRequest());
   mvc.perform(delete("/api/usuarios/{id}",adminId).header("Authorization",admin)).andExpect(status().isBadRequest());
   db.update("update usuario set correo=? where id_usuario=?",email("admin-modificado"),adminId);
-  mvc.perform(delete("/api/usuarios/{id}",adminId).header("Authorization",admin)).andExpect(status().isBadRequest());
+  // El JWT queda inválido al cambiar la identidad de correo.
+  mvc.perform(delete("/api/usuarios/{id}",adminId).header("Authorization",admin)).andExpect(status().isUnauthorized());
+ }
+ @Test void contactoAdminRechazaMovilesInvalidosSinCambiarDatos() throws Exception {
+  var original=db.queryForMap("select nro_celular,direccion_contacto from usuario where id_usuario=?",adminId);
+  for(String phone:List.of("", "782912", "899111222", "99911122", "9991112223", "+51999111222", "99911122a")) {
+   mvc.perform(patch("/api/usuarios/me").header("Authorization",admin).contentType(MediaType.APPLICATION_JSON)
+     .content(json.writeValueAsString(java.util.Map.of("nroCelular",phone,"direccion","No guardar")))).andExpect(status().isBadRequest());
+   assertEquals(original,db.queryForMap("select nro_celular,direccion_contacto from usuario where id_usuario=?",adminId));
+  }
  }
  @Test void relacionesImpidenEliminarVeterinarioUsuarioOPropietarioConHistoria() throws Exception {
   for(String path:List.of("/api/veterinarios/"+vetId,"/api/usuarios/"+vetUser,"/api/propietarios/"+ownerId))mvc.perform(delete(path).header("Authorization",admin)).andExpect(status().isConflict());
   assertEquals(1,db.queryForObject("select count(*) from atenciones where id_atencion=?",Integer.class,attention));
  }
- @Test void fotoDeVeterinarioSeGestionaSoloPorAdminConServicioExistente() throws Exception {
+ @Test void fotografiaVeterinariaSoloLaGestionaSuTitularYSeConsultaPorPerfil() throws Exception {
   var image=new java.awt.image.BufferedImage(4,4,java.awt.image.BufferedImage.TYPE_INT_RGB);var bytes=new java.io.ByteArrayOutputStream();javax.imageio.ImageIO.write(image,"png",bytes);
-  for(String t:List.of(vet,owner))mvc.perform(multipart("/api/usuarios/{id}/foto",vetUser).file(new MockMultipartFile("foto","qa.png","image/png",bytes.toByteArray())).header("Authorization",t)).andExpect(status().isForbidden());
-  mvc.perform(multipart("/api/usuarios/{id}/foto",vetUser).file(new MockMultipartFile("foto","qa.png","image/png",bytes.toByteArray())).header("Authorization",admin)).andExpect(status().isOk());
-  mvc.perform(get("/api/usuarios/{id}/foto",vetUser).header("Authorization",admin)).andExpect(status().isOk()).andExpect(content().contentType("image/png"));
-  mvc.perform(delete("/api/usuarios/{id}/foto",vetUser).header("Authorization",admin)).andExpect(status().isOk());
+  for(String t:List.of(admin,vet,owner)) {
+   mvc.perform(multipart("/api/usuarios/{id}/foto",vetUser).file(new MockMultipartFile("foto","qa.png","image/png",bytes.toByteArray())).header("Authorization",t)).andExpect(status().isForbidden());
+   mvc.perform(delete("/api/usuarios/{id}/foto",vetUser).header("Authorization",t)).andExpect(status().isForbidden());
+  }
+  mvc.perform(multipart("/api/usuarios/me/foto").file(new MockMultipartFile("foto","qa.png","image/png",bytes.toByteArray())).header("Authorization",vet)).andExpect(status().isOk());
+  for(String t:List.of(admin,vet,owner))mvc.perform(get("/api/veterinarios/{id}/foto",vetId).header("Authorization",t)).andExpect(status().isOk()).andExpect(content().bytes(bytes.toByteArray())).andExpect(header().string("Cache-Control","no-store"));
+  mvc.perform(get("/api/veterinarios/{id}/foto",vetId)).andExpect(status().isUnauthorized());
+  mvc.perform(get("/api/veterinarios/{id}/foto",Long.MAX_VALUE).header("Authorization",owner)).andExpect(status().isNotFound());
+  mvc.perform(get("/api/usuarios/{id}/foto",adminId).header("Authorization",owner)).andExpect(status().isForbidden());
+  mvc.perform(get("/api/usuarios/{id}/foto",vetUser).header("Authorization",owner)).andExpect(status().isForbidden());
+  mvc.perform(get("/api/veterinarios/{id}",vetId).header("Authorization",owner)).andExpect(jsonPath("$.fotoDisponible").value(true));
+  mvc.perform(delete("/api/usuarios/me/foto").header("Authorization",vet)).andExpect(status().isNoContent());
+  mvc.perform(get("/api/veterinarios/{id}/foto",vetId).header("Authorization",owner)).andExpect(status().isNotFound());
+  mvc.perform(get("/api/veterinarios/{id}",vetId).header("Authorization",owner)).andExpect(jsonPath("$.fotoDisponible").value(false));
  }
  @Test void gestionDeUsuarioValidaDuplicadosRolesYConservaCredencialesAlEditar() throws Exception {
   long role=db.queryForObject("select id_rol from roles where nombre='PROPIETARIO'",Long.class);
@@ -97,8 +116,8 @@ class AdminHttpIT extends PostgresIntegrationSupport {
   putJson("/api/usuarios/"+id,admin,edit).andExpect(status().isOk());
   assertEquals(original,db.queryForObject("select contrasena from usuario where id_usuario=?",String.class,id));
   assertEquals(role,db.queryForObject("select id_rol from usuario where id_usuario=?",Long.class,id));
-  edit.put("idRol",1);putJson("/api/usuarios/"+id,admin,edit).andExpect(status().isOk());
-  // El contrato de actualización ignora el rol: no existe cambio de rol en esta operación.
+  edit.put("idRol",1);putJson("/api/usuarios/"+id,admin,edit).andExpect(status().isBadRequest());
+  // El contrato rechaza explícitamente cambiar el rol: se conservan las vinculaciones.
   assertEquals(role,db.queryForObject("select id_rol from usuario where id_usuario=?",Long.class,id));
   body.put("correo",email("invalid-role"));body.put("nroDocumento","UR-"+key);body.put("idRol",Long.MAX_VALUE);postJson("/api/usuarios",admin,body).andExpect(status().isNotFound());
   mvc.perform(delete("/api/usuarios/{id}",id).header("Authorization",admin)).andExpect(status().isNoContent());

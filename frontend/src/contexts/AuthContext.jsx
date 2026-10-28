@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import {notifyProfilePhotoChanged} from '../lib/profilePhoto'
 
 const AuthContext = createContext(null)
 const loginPath = import.meta.env.VITE_LOGIN_PATH || '/auth/login'
@@ -50,6 +51,7 @@ export function AuthProvider({ children }) {
     const prefix = role === 'VETERINARIO' && ['Dr.', 'Dra.'].includes(detail?.tratamientoProfesional) ? detail.tratamientoProfesional + ' ' : ''
     setUser(prev => prev?.token === token ? { ...prev, name: prefix + displayName(data, prev.name) } : prev)
     setProfileError('')
+    return {profile:data,owner:role==='PROPIETARIO'?detail:null,vet:role==='VETERINARIO'?detail:null}
   }
 
   useEffect(() => {
@@ -113,14 +115,29 @@ export function AuthProvider({ children }) {
     setUser(auth)
     return auth
   }
-  async function uploadPhoto(file) {
+  async function uploadPhoto(file, { verify = false } = {}) {
     const body = new FormData()
     body.append('foto', file)
+    const expected = verify ? new Uint8Array(await file.arrayBuffer()) : null
     await api.post(`${profilePath}/foto`, body, { timeout: 30000 })
+    notifyProfilePhotoChanged(user?.idUsuario)
+    if (verify) {
+      try {
+        const { data } = await api.get(`${profilePath}/foto`, { responseType: 'blob' })
+        if (!data?.type?.startsWith('image/') || data.size !== file.size || !new Uint8Array(await data.arrayBuffer()).every((byte, i) => byte === expected[i])) throw Error('Fotografía diferente')
+      } catch { setPhotoVersion(v => v + 1); throw Error('La fotografía se subió, pero no pudo comprobarse. Reintenta la consulta antes de volver a subirla.') }
+    }
     setPhotoVersion(v => v + 1)
   }
-  async function deletePhoto() {
+  async function deletePhoto({ verify = false } = {}) {
     await api.delete(`${profilePath}/foto`)
+    notifyProfilePhotoChanged(user?.idUsuario)
+    if (verify) {
+      try { await api.get(`${profilePath}/foto`, { responseType: 'blob' }) }
+      catch (err) { if (err.response?.status === 404) { setPhotoUrl(null); setPhotoVersion(v => v + 1); return } }
+      setPhotoVersion(v => v + 1)
+      throw Error('La fotografía se eliminó, pero no pudo comprobarse. Reintenta la consulta.')
+    }
     setPhotoUrl(null)
     setPhotoVersion(v => v + 1)
   }

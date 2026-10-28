@@ -22,6 +22,7 @@ public interface VeterinarioMapper {
     )
     @Mapping(source = "usuario.nombres", target = "nombres")
     @Mapping(source = "usuario.apellidos", target = "apellidos")
+    @Mapping(target = "fotoDisponible", expression = "java(entity.getUsuario().getFotoPerfil() != null)")
     VeterinarioResponse toResponse(VeterinarioEntity entity);
 
     @Mapping(target = "idVeterinario", ignore = true)

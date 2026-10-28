@@ -18,21 +18,27 @@ public class UsuarioRequest {
     private String apellidos;
 
     @NotBlank(message = "El tipo de documento es obligatorio")
+    @Size(max=20)
     private String tipoDocumento;
 
     @NotBlank(message = "El número de documento es obligatorio")
+    @Size(max=20)
     private String nroDocumento;
 
     @NotBlank(message = "El correo es obligatorio")
     @Email(message = "El correo no tiene un formato válido")
+    @Size(max=150)
     private String correo;
 
     @NotBlank(message = "La contraseña es obligatoria")
     @pe.edu.utec.vetcare.validation.ContrasenaSegura
     private String contrasena;
 
+    @Size(max=20)
     private String nroCelular;
 
     @NotNull(message = "El rol es obligatorio")
     private Long idRol;
+
+    private Boolean confirmarAdmin;
 }

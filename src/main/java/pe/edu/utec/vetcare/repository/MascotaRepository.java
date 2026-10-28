@@ -16,6 +16,8 @@ public interface MascotaRepository
     @Query("SELECT m FROM MascotaEntity m WHERE EXISTS (SELECT c.idCita FROM CitaEntity c WHERE c.mascota = m AND c.veterinario.usuario.correo = :correo)")
     List<MascotaEntity> findPacientesDeVeterinario(@Param("correo") String correo);
 
+    boolean existsByPropietarioIdPropietario(Long idPropietario);
+
     List<MascotaEntity>
     findByPropietarioIdPropietario(Long idPropietario);
 }

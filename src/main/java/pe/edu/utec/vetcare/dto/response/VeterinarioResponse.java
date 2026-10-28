@@ -7,6 +7,7 @@ public class VeterinarioResponse {
 
     private Long idVeterinario;
     private Long idUsuario;
+    private boolean fotoDisponible;
     private String nombres;
     private String apellidos;
     private String especialidad;

@@ -30,6 +30,11 @@ public interface PropietarioMapper {
             source = "usuario.apellidos",
             target = "apellidos"
     )
+    @Mapping(source="usuario.correo", target="correo")
+    @Mapping(source="usuario.tipoDocumento", target="tipoDocumento")
+    @Mapping(source="usuario.nroDocumento", target="nroDocumento")
+    @Mapping(source="usuario.nroCelular", target="nroCelular")
+    @Mapping(target="fotoDisponible", expression="java(entity.getUsuario().getFotoPerfil()!=null)")
     PropietarioResponse toResponse(
             PropietarioEntity entity
     );

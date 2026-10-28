@@ -1,6 +1,6 @@
 import {useSearchParams} from 'react-router-dom'
 import AntecedentesCambios from '../components/AntecedentesCambios'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { BookHeart, CalendarDays, ClipboardPlus, RefreshCw, ShieldCheck, Syringe } from 'lucide-react'
 import PetAvatar from '../components/PetAvatar'
 import OwnerClinicalHistory from '../components/OwnerClinicalHistory'
@@ -64,6 +64,7 @@ function ClinicalRecord({ user }) {
   const [petsVersion, setPetsVersion] = useState(0)
   const request = useRef(null)
   const generation = useRef(0)
+  const consultedLink = useRef(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -80,7 +81,7 @@ function ClinicalRecord({ user }) {
     request.current?.abort()
     setId(nextId); setRecord(null); setError(''); setNotice(''); setBusy(false); setFilter('todos')
   }
-  async function consult(event) {
+  const consult = useCallback(async event => {
     event?.preventDefault()
     if (!id) { setNotice('Selecciona una mascota antes de consultar su expediente.'); return }
     request.current?.abort()
@@ -94,7 +95,14 @@ function ClinicalRecord({ user }) {
     } catch (err) {
       if (version === generation.current && !controller.signal.aborted) setError(readableError(err))
     } finally { if (version === generation.current) setBusy(false) }
-  }
+  }, [id])
+
+  const linkedPatient = params.get('consultar') === '1' ? params.get('paciente') : null
+  useEffect(() => {
+    if (!linkedPatient || petsLoading || petsError || id !== linkedPatient || consultedLink.current === linkedPatient) return
+    consultedLink.current = linkedPatient
+    consult()
+  }, [linkedPatient, id, petsLoading, petsError, consult])
 
   const summary = record ? clinicalSummary(record.sections) : null
   const events = record ? sortClinicalEvents(clinicalTimeline(record.sections).filter(e => filter === 'todos' || e.type === filter), order === 'antiguos') : []

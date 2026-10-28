@@ -50,8 +50,21 @@ public class SecurityConfig {
     }
 
     @Bean
-    JwtDecoder jwtDecoder(SecretKeySpec jwtKey) {
-        return NimbusJwtDecoder.withSecretKey(jwtKey).macAlgorithm(MacAlgorithm.HS256).build();
+    JwtDecoder jwtDecoder(SecretKeySpec jwtKey, pe.edu.utec.vetcare.repository.UsuarioRepository usuarios, CredencialJwt credencial) {
+        var decoder = NimbusJwtDecoder.withSecretKey(jwtKey).macAlgorithm(MacAlgorithm.HS256).build();
+        org.springframework.security.oauth2.core.OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> vigente = jwt -> {
+            Object id = jwt.getClaim("idUsuario");
+            var usuario = id instanceof Number n ? usuarios.findConRolByIdUsuario(n.longValue()).orElse(null) : null;
+            boolean valido = usuario != null && usuario.getCorreo().equals(jwt.getSubject())
+                    && usuario.getRol()!=null && usuario.getRol().getNombre().equals(jwt.getClaimAsString("rol"))
+                    && credencial.coincide(usuario, jwt.getClaimAsString("credencial"));
+            return valido ? org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success()
+                    : org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                            new org.springframework.security.oauth2.core.OAuth2Error("invalid_token", "La sesión ya no es válida. Inicia sesión nuevamente.", null));
+        };
+        decoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                org.springframework.security.oauth2.jwt.JwtValidators.createDefault(), vigente));
+        return decoder;
     }
 
     @Bean

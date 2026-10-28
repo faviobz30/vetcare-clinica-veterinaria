@@ -1,3 +1,5 @@
+import {useProfilePhotoRefresh} from '../lib/profilePhoto'
+import AccountSecurity from '../components/AccountSecurity'
 import { useEffect, useRef, useState } from 'react'
 import { Camera, Save, Trash2, UserRound, X, Pencil } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
@@ -33,6 +35,18 @@ function PersonalProfile({ auth }) {
   const [remove, setRemove] = useState(false)
   const input = useRef(null)
   const lock = useRef(false)
+  const profileIdle = useRef(true)
+  useEffect(() => { profileIdle.current=!editing&&!busy;return()=>{profileIdle.current=false} }, [editing,busy])
+  useProfilePhotoRefresh(async()=>{
+    if(role!=='PROPIETARIO'||!profileIdle.current)return
+    try{
+      const latest=await refreshProfile()
+      if(!profileIdle.current||!latest)return
+      const next=profileDraft(latest.profile,latest.owner,role)
+      setBaseline(next);setForm(next)
+      setError(previous=>previous==='No se pudo actualizar el perfil. Intenta volver a esta ventana nuevamente.'?'':previous)
+    }catch{if(profileIdle.current)setError('No se pudo actualizar el perfil. Intenta volver a esta ventana nuevamente.')}
+  },{initial:role==='PROPIETARIO'})
   useEffect(() => () => { if (preview?.url) URL.revokeObjectURL(preview.url) }, [preview])
   useEffect(() => {
     if (!message) return undefined
@@ -102,6 +116,7 @@ function PersonalProfile({ auth }) {
       <label className="profile-field"><span>Celular</span><input type="tel" autoComplete="tel" maxLength={20} value={form.nroCelular} onChange={change('nroCelular')} readOnly={!editing} disabled={!!busy} className={editing ? 'profile-active-field' : ''} /></label>
       <label className="profile-field"><span>Dirección</span><input autoComplete="street-address" maxLength={200} value={form.direccion || ''} onChange={change('direccion')} readOnly={!editing} disabled={!!busy} className={editing ? 'profile-active-field' : ''} /></label>
     </div></form>
+    <AccountSecurity/>
     {(preview || remove) && <PhotoDialog busy={!!busy} onClose={() => { setPreview(null); setRemove(false) }} title={preview ? 'Vista previa de tu fotografía' : 'Quitar fotografía'}>
       {preview ? <img className="profile-preview" src={preview.url} alt="Vista previa de la nueva fotografía" /> : <p>¿Quieres quitar tu fotografía de perfil? Tus demás datos se conservarán.</p>}
       {error && <p role="alert" className="profile-error">{error}</p>}

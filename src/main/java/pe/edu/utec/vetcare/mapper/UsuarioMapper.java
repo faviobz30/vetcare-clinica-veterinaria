@@ -26,6 +26,7 @@ public interface UsuarioMapper {
             target = "rol"
     )
     @Mapping(target = "fotoPerfilUrl", ignore = true)
+    @Mapping(target="fotoDisponible", expression="java(entity.getFotoPerfil() != null)")
     UsuarioResponse toResponse(UsuarioEntity entity);
 
     @Mapping(target = "idUsuario", ignore = true)

@@ -1,59 +1,108 @@
-import {api} from '../lib/api'
-import {useCitaToast} from '../lib/useCitaToast'
-import {profileChanges} from '../lib/profile'
-import './Perfil.css'
-import { useState }  from 'react'
-import { Camera, Trash2, UserRound } from 'lucide-react'
+import AccountSecurity from '../components/AccountSecurity'
+import { useEffect, useRef, useState } from 'react'
+import { Camera, Pencil, Save, Trash2, UserRound, X } from 'lucide-react'
+import { api, errorText } from '../lib/api'
+import { useCitaToast } from '../lib/useCitaToast'
+import { profileChanges } from '../lib/profile'
+import { adminContact, adminContactErrors } from '../lib/adminProfile'
 import { useAuth } from '../contexts/AuthContext'
-import { errorText } from '../lib/api'
 import { prepareProfilePhoto } from '../lib/photo'
+import ProfilePhotoDialog from '../components/ProfilePhotoDialog'
+import './Perfil.css'
 
 export default function PerfilAdmin() {
-  const { user, profile, photoUrl, uploadPhoto, deletePhoto,refreshProfile } = useAuth()
-  const role = user?.role
-  const [busy,setBusy] = useState('')
-  const [message,setMessage] = useCitaToast()
-  const [editing,setEditing]=useState(false),[draft,setDraft]=useState({})
-  const [error,setError] = useState('')
-  async function onPhoto(e) {
-    const file = e.target.files?.[0]; e.target.value=''
-    if (!file) return
-    setError(''); setMessage(''); setBusy('foto')
-    try { await uploadPhoto(await prepareProfilePhoto(file)); setMessage('Fotografía actualizada.') }
-    catch (err) { setError(err.response ? errorText(err) : err.message) }
-    finally { setBusy('') }
+  const { user, profile, profileError, photoUrl, uploadPhoto, deletePhoto, refreshProfile } = useAuth()
+  const [busy, setBusy] = useState('')
+  const [message, setMessage] = useCitaToast()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState({})
+  const [saved, setSaved] = useState(null)
+  const [fields, setFields] = useState({})
+  const [error, setError] = useState('')
+  const [preview, setPreview] = useState(null)
+  const [remove, setRemove] = useState(false)
+  const input = useRef(null)
+  const lock = useRef(false)
+  const contact = saved || adminContact(profile)
+  useEffect(() => () => { if (preview?.url) URL.revokeObjectURL(preview.url) }, [preview])
+  function start(action) {
+    if (lock.current) return false
+    lock.current = true; setBusy(action); setError(''); setMessage(''); return true
   }
-  async function onDeletePhoto() {
-    if (!window.confirm('¿Eliminar tu fotografía de perfil?')) return
-    setError(''); setBusy('foto')
-    try { await deletePhoto(); setMessage('Fotografía eliminada.') }
-    catch (err) { setError(errorText(err)) }
-    finally { setBusy('') }
+  function finish() { lock.current = false; setBusy('') }
+  function edit() { setDraft(contact); setFields({}); setError(''); setMessage(''); setEditing(true) }
+  function cancel() { setDraft(contact); setFields({}); setError(''); setEditing(false) }
+  function change(key, value) {
+    setDraft(current => ({ ...current, [key]: value }))
+    setFields(current => ({ ...current, [key]: undefined })); setError('')
   }
-  async function save(e){e.preventDefault();if(busy)return;setBusy('datos');setError('');try{const baseline={nroCelular:profile?.nroCelular||'',direccion:profile?.direccionContacto||''};const p=profileChanges(draft,baseline);if(Object.keys(p).length)await api.patch('/usuarios/me',p);await refreshProfile();setEditing(false);setMessage('Datos guardados correctamente.')}catch(err){setError(err.response?errorText(err):err.message)}finally{setBusy('')}}
-  return <section className="account-profile space-y-6">
-    <div><h1 className="text-3xl font-black flex items-center gap-2"><UserRound/> Mi perfil</h1><p className="text-vetcare-text-muted mt-1">Datos de la cuenta autenticada, según tu rol.</p></div>
-    {error && <p role="alert" className="rounded-xl bg-red-50 text-red-800 p-3">{error}</p>}
-    {message && <p role="status" className="rounded-xl bg-emerald-50 text-emerald-800 p-3">{message}</p>}
-    <article className="bg-white border border-vetcare-soft rounded-2xl p-6 flex gap-5 items-center">
-      <span className="w-20 h-20 rounded-full overflow-hidden bg-[#eaddfa] grid place-items-center text-2xl font-black text-[#6927a9]">
-        {photoUrl ? <img src={photoUrl} alt="" className="w-full h-full object-cover"/> : (profile?.nombres || 'V').charAt(0)}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="font-bold text-lg">{[profile?.nombres, profile?.apellidos].filter(Boolean).join(' ') || user?.name}</p>
-        <p className="text-sm text-vetcare-text-muted">{profile?.correo}</p>
-        <p className="text-xs mt-1 font-semibold text-vetcare-primary">{role}</p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <label className="btn btn-ghost text-sm"><Camera size={16}/> Cambiar foto<input type="file" className="hidden" accept="image/jpeg,image/png,image/webp,image/avif" onChange={onPhoto} disabled={!!busy}/></label>
-          {photoUrl && <button type="button" className="btn btn-ghost text-sm" disabled={!!busy} onClick={onDeletePhoto}><Trash2 size={16}/> Quitar foto</button>}
-        </div>
+  async function onPhoto(event) {
+    const file = event.target.files?.[0]; event.target.value = ''
+    if (!file || !start('preparando')) return
+    try {
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type)) throw Error('Selecciona una fotografía JPG, PNG, WebP o AVIF.')
+      const prepared = await prepareProfilePhoto(file)
+      setPreview({ file: prepared, url: URL.createObjectURL(prepared) })
+    } catch (err) { setError(err.message) } finally { finish() }
+  }
+  async function confirmPhoto() {
+    if (!start('foto')) return
+    try {
+      if (preview) await uploadPhoto(preview.file, { verify: true })
+      else await deletePhoto({ verify: true })
+      setPreview(null); setRemove(false)
+      setMessage(preview ? 'Fotografía guardada y comprobada.' : 'Fotografía eliminada y comprobada.')
+    } catch (err) { setError(err.message?.startsWith('La fotografía') ? err.message : errorText(err)) }
+    finally { finish() }
+  }
+  async function save(event) {
+    event.preventDefault()
+    if (lock.current || !editing) return
+    const invalid = adminContactErrors(draft); setFields(invalid)
+    if (Object.keys(invalid).length) return
+    const changes = profileChanges(draft, contact)
+    if (!Object.keys(changes).length) { setEditing(false); setError(''); setMessage('No hay cambios para guardar.'); return }
+    if (!start('datos')) return
+    try {
+      const { data } = await api.patch('/usuarios/me', changes)
+      setSaved(adminContact(data)); setEditing(false); setFields({})
+      try { await refreshProfile(); setSaved(null); setMessage('Datos guardados correctamente.') }
+      catch { setError('Los datos se guardaron, pero no se pudo actualizar la vista. Reintenta la consulta.'); }
+    } catch (err) {
+      const reported = err.response?.data?.campos
+      if (reported && ('nroCelular' in reported || 'direccion' in reported)) setFields(reported)
+      else setError(errorText(err))
+    } finally { finish() }
+  }
+  async function retry() {
+    if (!start('consulta')) return
+    try { await refreshProfile(); setSaved(null) } catch { setError('No se pudo actualizar el perfil. Intenta nuevamente.') } finally { finish() }
+  }
+  if (!profile || profileError) return <section className="account-profile admin-profile" aria-busy={!profile && !profileError}><h1>Mi perfil</h1>{profileError ? <><p role="alert" className="profile-error">{profileError}</p><button className="profile-primary" disabled={!!busy} onClick={retry}>Reintentar</button></> : <p>Cargando tu perfil…</p>}{error && <p role="alert">{error}</p>}</section>
+  return <section className="account-profile admin-profile">
+    <header className="profile-header"><div><h1>Mi perfil</h1><p>Datos de tu cuenta y tu información personal.</p></div>{!editing && <button type="button" className="profile-primary" disabled={!!busy || !!preview || remove} onClick={edit}><Pencil size={17}/>Editar información</button>}</header>
+    {error && !preview && !remove && <div className="profile-error" role="alert">{error}{!editing && <button type="button" className="profile-edit" disabled={!!busy} onClick={retry}>Reintentar consulta</button>}</div>}
+    {message && <p className="profile-message" role="status">{message}</p>}
+    <article className="profile-card profile-identity">
+      <div className="profile-avatar">{photoUrl ? <img src={photoUrl} alt="Tu fotografía de perfil"/> : <UserRound size={56} aria-label="Sin fotografía"/>}</div>
+      <div className="profile-identity-text"><h2>{[profile.nombres, profile.apellidos].filter(Boolean).join(' ') || user?.name}</h2><p>{profile.correo}</p><span className="profile-role">ADMIN</span>
+        <div className="profile-photo-actions"><button type="button" disabled={!!busy || editing} onClick={() => input.current.click()}><Camera size={19}/>Cambiar foto</button><button type="button" disabled={!!busy || editing || !photoUrl} onClick={() => { setError(''); setMessage(''); setRemove(true) }}><Trash2 size={19}/>Quitar foto</button></div>
+        <input ref={input} type="file" hidden accept="image/jpeg,image/png,image/webp,image/avif" onChange={onPhoto} aria-label="Seleccionar fotografía del administrador"/>
       </div>
     </article>
-    {!editing?<button className="profile-edit" onClick={()=>{setDraft({nroCelular:profile?.nroCelular||'',direccion:profile?.direccionContacto||''});setEditing(true)}}>Editar información</button>:null}
-    <form className="profile-card" onSubmit={save}><h2>Datos personales</h2><div className="profile-form-grid"><label className="profile-field">Celular<input className="input" readOnly={!editing} disabled={!!busy} value={editing?draft.nroCelular:profile?.nroCelular||''} onChange={e=>setDraft(d=>({...d,nroCelular:e.target.value}))}/></label><label className="profile-field">Dirección<input className="input" maxLength={200} readOnly={!editing} disabled={!!busy} value={editing?draft.direccion:profile?.direccionContacto||''} onChange={e=>setDraft(d=>({...d,direccion:e.target.value}))}/></label></div>{editing&&<div className="flex gap-3 mt-4"><button type="button" className="btn btn-ghost" disabled={!!busy} onClick={()=>setEditing(false)}>Cancelar</button><button className="btn btn-primary" disabled={!!busy}>Guardar</button></div>}</form>
-    <dl className="bg-white border border-vetcare-soft rounded-2xl p-6 grid sm:grid-cols-2 gap-4 text-sm">
-      <div><dt className="text-vetcare-text-muted">Documento</dt><dd className="font-semibold">{profile?.tipoDocumento} {profile?.nroDocumento}</dd></div>
-      <div><dt className="text-vetcare-text-muted">Celular</dt><dd className="font-semibold">{profile?.nroCelular || '—'}</dd></div>
-    </dl>
+    <article className="profile-card"><h2>Información de la cuenta</h2><div className="profile-info-grid">
+      {[['Tipo de documento', profile.tipoDocumento], ['Número de documento', profile.nroDocumento], ['Rol', user?.role]].map(([label, value]) => <div className="profile-field" key={label}><span>{label}</span><strong className="admin-profile-value">{value || 'No disponible'}</strong></div>)}
+    </div></article>
+    <form className="profile-card" onSubmit={save} noValidate><h2>Datos personales</h2><div className="profile-form-grid">
+      <div className="profile-field"><span>Celular</span>{editing ? <><input aria-label="Celular" type="tel" inputMode="numeric" autoComplete="tel" maxLength={9} className="profile-active-field" value={draft.nroCelular} disabled={!!busy} onChange={e => change('nroCelular', e.target.value)} aria-invalid={!!fields.nroCelular} aria-describedby={fields.nroCelular ? 'admin-phone-error' : undefined}/>{fields.nroCelular && <small id="admin-phone-error" role="alert">{fields.nroCelular}</small>}</> : <strong className="admin-profile-value">{contact.nroCelular || 'No registrado'}</strong>}</div>
+      <div className="profile-field"><span>Dirección</span>{editing ? <><input aria-label="Dirección" autoComplete="street-address" maxLength={200} className="profile-active-field" value={draft.direccion} disabled={!!busy} onChange={e => change('direccion', e.target.value)} aria-invalid={!!fields.direccion} aria-describedby={fields.direccion ? 'admin-address-error' : undefined}/>{fields.direccion && <small id="admin-address-error" role="alert">{fields.direccion}</small>}</> : <strong className="admin-profile-value">{contact.direccion || 'No registrada'}</strong>}</div>
+    </div>{editing && <div className="profile-edit-actions"><button type="button" className="profile-edit" disabled={!!busy} onClick={cancel}><X size={17}/>Cancelar</button><button className="profile-primary" disabled={!!busy}><Save size={17}/>{busy === 'datos' ? 'Guardando…' : 'Guardar'}</button></div>}</form>
+    <AccountSecurity/>
+    {(preview || remove) && <ProfilePhotoDialog busy={!!busy} onClose={() => { setPreview(null); setRemove(false); setError('') }}>
+      <h2>{preview ? 'Vista previa de tu fotografía' : 'Quitar fotografía'}</h2>
+      {preview ? <img className="profile-preview" src={preview.url} alt="Vista previa de la nueva fotografía"/> : <p>¿Quieres quitar tu fotografía de perfil? Tus demás datos se conservarán.</p>}
+      {error && <p className="profile-error" role="alert">{error}</p>}
+      <div className="profile-dialog-actions"><button type="button" disabled={!!busy} onClick={() => { setPreview(null); setRemove(false); setError('') }}>Cancelar</button><button type="button" className="profile-primary" disabled={!!busy} onClick={confirmPhoto}>{busy ? 'Comprobando…' : preview ? 'Guardar foto' : 'Quitar foto'}</button></div>
+    </ProfilePhotoDialog>}
   </section>
 }

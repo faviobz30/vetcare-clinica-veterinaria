@@ -21,3 +21,11 @@
 .profile-edit{display:inline-flex;align-items:center;gap:8px;border:1px solid #d9c9f2;border-radius:9px;padding:10px 16px;background:white;color:#3B2382;font-weight:650;cursor:pointer}
 .profile-field input[readonly]{background:#F8F7FC;cursor:default}
 .profile-field input.profile-active-field{background:white;border-color:#8365d4;outline-offset:1px}
+
+/* Ajustes exclusivos del perfil ADMIN. */
+.admin-profile .profile-header p{font-size:15px;color:#6B7280;margin:6px 0 0}
+.admin-profile .admin-profile-value{font-size:14px;font-weight:600;color:#1F2937;overflow-wrap:anywhere;padding:8px 0;min-height:36px}
+.admin-profile .profile-field small{color:#3B2382}
+.admin-profile .profile-photo-actions button{border-color:#d9c9f2}
+.admin-profile .profile-photo-actions button:hover{background:#F8F7FC}
+.admin-profile .profile-error .profile-edit{margin-left:12px}

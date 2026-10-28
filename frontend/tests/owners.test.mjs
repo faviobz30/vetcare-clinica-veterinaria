@@ -1,0 +1,8 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {filterOwners,ownerCandidates,ownerContactErrors,ownerError,ownerState,ownerPetSpecies} from '../src/lib/owners.js'
+const owners=[{idPropietario:1,idUsuario:20,nombres:'Lucía',apellidos:'Pérez',correo:'qa@example.invalid',nroDocumento:'00123456',nroCelular:'999111222'}]
+test('buscador de propietarios conserva acentos, documentos y contacto',()=>{for(const q of ['lucia','perez','00123456','qa@example','999111222'])assert.equal(filterOwners(owners,q).length,1);assert.equal(filterOwners(owners,'otro').length,0)})
+test('vinculación solo ofrece propietarios sin perfil asociado',()=>{assert.deepEqual(ownerCandidates([{idUsuario:20,rol:'PROPIETARIO'},{idUsuario:21,rol:'PROPIETARIO'},{idUsuario:22,rol:'ADMIN'},{idUsuario:23,rol:'VETERINARIO'}],owners),[{idUsuario:21,rol:'PROPIETARIO'}])})
+test('celular peruano opcional y validación sin corregir datos a escondidas',()=>{for(const nroCelular of ['',undefined,'987654321'])assert.deepEqual(ownerContactErrors({nroCelular}),{});for(const nroCelular of ['abc','887654321','98765432','9876543210','+51987654321','987 654321'])assert.ok(ownerContactErrors({nroCelular}).nroCelular)})
+test('mensajes de sesión, conflictos y etiquetas no inventan estados',()=>{assert.match(ownerError({response:{status:401}}),/sesión/);assert.doesNotMatch(ownerError({response:{status:401}}),/HTTP/);assert.match(ownerError({response:{status:409}}),/conservan/);assert.equal(ownerState('ACTIVO'),'Activo');assert.equal(ownerState('DESCONOCIDO'),'No disponible');assert.equal(ownerPetSpecies('CANINA'),'Perro')})

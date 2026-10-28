@@ -15,6 +15,12 @@ public class PropietarioResponse {
 
     private String apellidos;
 
+    private String correo;
+    private String tipoDocumento;
+    private String nroDocumento;
+    private String nroCelular;
+    private boolean fotoDisponible;
+
     private String direccion;
 
     private LocalDate fechaRegistroClinica;
