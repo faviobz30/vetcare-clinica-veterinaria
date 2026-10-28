@@ -13,5 +13,9 @@ public class HistoriaClinicaResponse {
 
     private String nombreMascota;
 
+    private String telefonoPropietario;
+
     private LocalDateTime fechaApertura;
+
+    private AntecedentesResponse antecedentes;
 }

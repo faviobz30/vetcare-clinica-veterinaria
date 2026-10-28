@@ -1,5 +1,7 @@
 package pe.edu.utec.vetcare.service;
 
+import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
+import pe.edu.utec.vetcare.dto.request.ActualizarPerfilPropietarioRequest;
 import pe.edu.utec.vetcare.dto.request.PropietarioRequest;
 import pe.edu.utec.vetcare.dto.response.PropietarioResponse;
 
@@ -11,6 +13,8 @@ public interface PropietarioService {
 
     PropietarioResponse obtener(Long id);
 
+    PropietarioResponse obtenerMio();
+
     PropietarioResponse crear(
             PropietarioRequest request
     );
@@ -21,6 +25,9 @@ public interface PropietarioService {
     );
 
     PropietarioResponse actualizarMiDireccion(String direccion);
+
+    UsuarioResponse actualizarMiPerfil(
+            ActualizarPerfilPropietarioRequest request);
 
     void eliminar(Long id);
 }

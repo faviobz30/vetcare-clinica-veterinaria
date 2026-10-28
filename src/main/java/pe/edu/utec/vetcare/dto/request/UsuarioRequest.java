@@ -28,7 +28,7 @@ public class UsuarioRequest {
     private String correo;
 
     @NotBlank(message = "La contraseña es obligatoria")
-    @Size(min = 6)
+    @pe.edu.utec.vetcare.validation.ContrasenaSegura
     private String contrasena;
 
     private String nroCelular;

@@ -6,6 +6,12 @@ import lombok.Data;
 
 @Data
 public class UpdateVeterinarioRequest {
+    @jakarta.validation.constraints.Pattern(regexp="Dr[.]|Dra[.]|", message="Selecciona Dr., Dra. o Sin tratamiento")
+    private String tratamientoProfesional;
+
+
+    @jakarta.validation.Valid
+    private ActualizarUsuarioRequest datosUsuario;
 
     @NotBlank(message = "La especialidad es obligatoria")
     @Size(max = 100)

@@ -20,4 +20,16 @@ public class CitaResponse {
     private EstadoCita estado;
 
     private String motivoCita;
+    private String motivoCancelacion;
+    private String detalleCancelacion;
+    private Long idUsuarioCancelacion;
+    private String rolCancelacion;
+    private LocalDateTime fechaCancelacion;
+    private LocalDateTime horaServidor;
+    private LocalDateTime finRegistroAtencion;
+    private boolean puedeCancelar;
+    private boolean puedeReprogramar;
+    private boolean puedeIniciarAtencion;
+    private boolean puedeGuardarAtencion;
+    private RegularizacionResponse regularizacion;
 }

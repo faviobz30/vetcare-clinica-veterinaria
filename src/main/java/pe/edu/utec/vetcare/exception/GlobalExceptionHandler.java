@@ -13,6 +13,16 @@ import java.util.LinkedHashMap;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<?> integridad(org.springframework.dao.DataIntegrityViolationException ex) {
+        return ResponseEntity.status(409).body(java.util.Map.of("error", "No se pudo guardar o eliminar: el registro está relacionado con otros datos o contiene un valor duplicado."));
+    }
+
+
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String,String>> conflictoVersion(org.springframework.orm.ObjectOptimisticLockingFailureException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error","El expediente cambió mientras editabas. Conserva tu texto y vuelve a cargarlo antes de guardar."));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {

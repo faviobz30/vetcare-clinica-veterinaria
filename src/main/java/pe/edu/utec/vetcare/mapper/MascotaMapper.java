@@ -12,6 +12,7 @@ public interface MascotaMapper {
 
     @Mapping(target = "idMascota", ignore = true)
     @Mapping(target = "propietario", ignore = true)
+    @Mapping(target = "fotoPerfil", ignore = true)
     MascotaEntity toEntity(MascotaRequest request);
 
     @Mapping(
@@ -22,10 +23,12 @@ public interface MascotaMapper {
             expression = "java(entity.getPropietario().getUsuario().getNombres() + \" \" + entity.getPropietario().getUsuario().getApellidos())",
             target = "nombrePropietario"
     )
+    @Mapping(target = "tieneFoto", expression = "java(entity.getFotoPerfil() != null)")
     MascotaResponse toResponse(MascotaEntity entity);
 
     @Mapping(target = "idMascota", ignore = true)
     @Mapping(target = "propietario", ignore = true)
+    @Mapping(target = "fotoPerfil", ignore = true)
     void updateEntity(
             MascotaRequest request,
             @MappingTarget MascotaEntity entity

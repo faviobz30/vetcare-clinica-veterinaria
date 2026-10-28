@@ -1,5 +1,8 @@
 package pe.edu.utec.vetcare.service.impl;
 
+import pe.edu.utec.vetcare.mapper.UsuarioMapper;
+import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
+import pe.edu.utec.vetcare.dto.request.ActualizarPerfilPropietarioRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,6 +30,7 @@ public class PropietarioServiceImpl
     private final PropietarioRepository propietarioRepository;
     private final UsuarioRepository usuarioRepository;
     private final PropietarioMapper propietarioMapper;
+    private final UsuarioMapper usuarioMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,6 +49,12 @@ public class PropietarioServiceImpl
         PropietarioEntity entity = buscarPropietario(id);
         validarLecturaPropietario(entity);
         return propietarioMapper.toResponse(entity);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PropietarioResponse obtenerMio() {
+        return propietarioMapper.toResponse(propietarioAutenticado());
     }
 
     @Override
@@ -105,19 +115,23 @@ public class PropietarioServiceImpl
     @Override
     @Transactional
     public PropietarioResponse actualizarMiDireccion(String direccion) {
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
-            throw new AccessDeniedException("Acceso denegado");
-        }
-        Object claim = jwtAuth.getToken().getClaim("idUsuario");
-        if (!(claim instanceof Number idUsuarioToken)) {
-            throw new AccessDeniedException("Token sin identificador de usuario");
-        }
-        PropietarioEntity entity = propietarioRepository
-                .findByUsuarioIdUsuario(idUsuarioToken.longValue())
-                .orElseThrow(() -> new ResourceNotFoundException("Propietario no encontrado"));
+        PropietarioEntity entity = propietarioAutenticado();
         entity.setDireccion(direccion);
         return propietarioMapper.toResponse(propietarioRepository.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse actualizarMiPerfil(
+            ActualizarPerfilPropietarioRequest request) {
+        var propietario = propietarioAutenticado();
+        var usuario = propietario.getUsuario();
+        if (request.getNroCelular()==null && request.getDireccion()==null)
+            throw new BadRequestException("Indica al menos un campo para actualizar");
+        if (request.getNroCelular()!=null) usuario.setNroCelular(request.getNroCelular().trim());
+        if (request.getDireccion()!=null) propietario.setDireccion(request.getDireccion());
+        propietarioRepository.saveAndFlush(propietario);
+        return usuarioMapper.toResponse(usuario);
     }
 
     @Override
@@ -152,6 +166,20 @@ public class PropietarioServiceImpl
                 || !entity.getUsuario().getIdUsuario().equals(idUsuarioToken.longValue())) {
             throw new AccessDeniedException("No puedes consultar otro propietario");
         }
+    }
+
+    private PropietarioEntity propietarioAutenticado() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication instanceof JwtAuthenticationToken jwtAuth)) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+        Object claim = jwtAuth.getToken().getClaim("idUsuario");
+        if (!(claim instanceof Number idUsuarioToken)) {
+            throw new AccessDeniedException("Token sin identificador de usuario");
+        }
+        return propietarioRepository
+                .findByUsuarioIdUsuario(idUsuarioToken.longValue())
+                .orElseThrow(() -> new ResourceNotFoundException("Propietario no encontrado"));
     }
 
     private PropietarioEntity buscarPropietario(

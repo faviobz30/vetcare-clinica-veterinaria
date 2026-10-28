@@ -1,0 +1,38 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Fotos y filtros</title><body><div id="root"></div><script type="module">
+// Adaptador exclusivo de QA. No existe ninguna solicitud a la API o a PostgreSQL.
+import React,{useState} from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter} from 'react-router-dom'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import Atenciones from '/src/pages/Atenciones.jsx'
+import Home from '/src/pages/Home.jsx'
+import PetPhotoCrop from '/src/components/PetPhotoCrop.jsx'
+import {api} from '/src/lib/api.js'
+import {notifyPetPhoto} from '/src/lib/petPhoto.js'
+import '/src/index.css'
+const h=React.createElement
+const token=['qa',btoa(JSON.stringify({idUsuario:321,rol:'PROPIETARIO',sub:'qa@example.invalid',exp:4102444800})),'qa'].join('.')
+sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role','PROPIETARIO')
+let photo=null
+const pets=[{idMascota:1,idPropietario:1,nombre:'Paciente QA A',especie:'Canino',raza:'Prueba',fechaNacimiento:'2023-07-20'},{idMascota:2,idPropietario:1,nombre:'Paciente QA B',especie:'Felino',fechaNacimiento:'2026-02-12'}]
+const attention=id=>({idAtencion:id,idHistoria:id,idCita:id,idVeterinario:1,fechaAtencion:id===1?'2026-10-20T18:14:00':'2026-10-12T22:30:00',diagnostico:'Diagnóstico sintético '+id,sintoma:'Síntomas de QA',tratamiento:'Texto original\nSegunda línea',observacion:'Observaciones de prueba',peso:12.5})
+api.defaults.adapter=async config=>{
+ let data
+ switch(config.url){
+ case '/usuarios/me':data={idUsuario:321,nombres:'Cuenta QA',rol:'PROPIETARIO'};break
+ case '/propietarios/me':data={idPropietario:1};break
+ case '/mascotas':data=pets.map(p=>({...p,tieneFoto:p.idMascota===1&&!!photo}));break
+ case '/citas':data=[{idCita:1,idMascota:1,fechaCita:'2030-10-20T18:14:00',estado:'PENDIENTE',motivoCita:'Consulta QA'},{idCita:2,idMascota:2,fechaCita:'2030-10-21T10:00:00',estado:'CONFIRMADA',motivoCita:'Consulta QA'}];break
+ case '/atenciones':data=[attention(1),attention(2)];break
+ case '/atenciones/1':data=attention(1);break
+ case '/atenciones/2':data=attention(2);break
+ case '/veterinarios':data=[{idVeterinario:1,nombres:'Profesional',apellidos:'QA',especialidad:'Prueba'}];break
+ case '/mascotas/1/foto':if(photo)data=photo;break
+ }
+ if(data===undefined)throw {response:{status:404,data:{error:'No disponible en QA'}},config}
+ return {data,status:200,statusText:'OK',headers:{},config}
+}
+function QA(){const[view,setView]=useState('atenciones');const[raw,setRaw]=useState(null);const[status,setStatus]=useState('Sin fotografía de prueba')
+ return h(MemoryRouter,null,h(AuthProvider,null,h('div',{style:{padding:'24px'}},h('p',null,'QA AISLADA · Datos sintéticos · Sin API ni base de datos'),h('div',{style:{display:'flex',gap:'10px',margin:'12px 0'}},h('button',{className:'btn btn-ghost',onClick:async()=>{const bytes=await(await fetch('./crop-source.png')).blob();setRaw(new File([bytes],'qa.png',{type:'image/png'}))}},'Probar recorte'),h('button',{className:'btn btn-ghost',onClick:()=>setView(v=>v==='home'?'atenciones':'home')},'Alternar Home QA'),h('button',{className:'btn btn-ghost',onClick:()=>{photo=null;notifyPetPhoto(1,false);setStatus('Fotografía eliminada en memoria de QA')}},'Quitar foto QA'),h('span',{role:'status'},status)),h(view==='home'?Home:Atenciones),raw&&h(PetPhotoCrop,{file:raw,onCancel:()=>setRaw(null),onConfirm:file=>{photo=file;notifyPetPhoto(1,true);setRaw(null);setStatus('Recorte confirmado: PNG cuadrado 512 × 512')}}))))}
+createRoot(document.getElementById('root')).render(h(QA))
+</script></body></html>

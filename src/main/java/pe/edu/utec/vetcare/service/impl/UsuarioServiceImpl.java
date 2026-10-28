@@ -51,6 +51,7 @@ public class UsuarioServiceImpl
     @Transactional
     public UsuarioResponse crear(UsuarioRequest request) {
 
+        pe.edu.utec.vetcare.validation.PoliticaContrasena.validar(request.getContrasena());
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
             throw new BadRequestException("El correo ya se encuentra registrado");
         }
@@ -95,6 +96,12 @@ public class UsuarioServiceImpl
 
         UsuarioEntity entity = buscarUsuario(id);
 
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwt) {
+            Object actual = jwt.getToken().getClaim("idUsuario");
+            if (actual instanceof Number idActual && entity.getIdUsuario().equals(idActual.longValue()))
+                throw new BadRequestException("No puedes eliminar la cuenta con la que iniciaste sesión");
+        }
         usuarioRepository.delete(entity);
     }
 

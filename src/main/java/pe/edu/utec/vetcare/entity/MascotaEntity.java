@@ -54,6 +54,9 @@ public class MascotaEntity {
     )
     private String sexo;
 
+    @Column(name = "foto_perfil", columnDefinition = "bytea")
+    private byte[] fotoPerfil;
+
     @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
 }

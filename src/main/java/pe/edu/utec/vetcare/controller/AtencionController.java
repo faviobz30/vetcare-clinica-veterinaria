@@ -47,6 +47,12 @@ public class AtencionController {
         return ResponseEntity.ok(atencionService.update(id, request));
     }
 
+    @PatchMapping("/{id}/precio")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AtencionResponse> precio(@PathVariable Long id,@Valid @RequestBody pe.edu.utec.vetcare.dto.request.PrecioAtencionRequest request){
+        return ResponseEntity.ok(atencionService.actualizarPrecio(id,request.getPrecioAtencion()));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id

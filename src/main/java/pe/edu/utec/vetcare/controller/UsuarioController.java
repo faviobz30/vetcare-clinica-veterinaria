@@ -3,11 +3,20 @@ package pe.edu.utec.vetcare.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
+import pe.edu.utec.vetcare.service.FotoPerfilService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.utec.vetcare.dto.request.UsuarioRequest;
 import pe.edu.utec.vetcare.dto.request.ActualizarUsuarioRequest;
 import pe.edu.utec.vetcare.dto.response.UsuarioResponse;
 import pe.edu.utec.vetcare.service.UsuarioService;
+import pe.edu.utec.vetcare.repository.UsuarioRepository;
+import pe.edu.utec.vetcare.mapper.UsuarioMapper;
+import pe.edu.utec.vetcare.exception.ResourceNotFoundException;
 
 import java.util.List;
 
@@ -17,6 +26,79 @@ import java.util.List;
 public class UsuarioController {
 
     private final UsuarioService usuarioService;
+    private final UsuarioRepository usuarioRepository;
+    private final UsuarioMapper usuarioMapper;
+    private final FotoPerfilService fotoPerfilService;
+
+    // Cada usuario autenticado consulta únicamente su propio perfil.
+    @GetMapping("/me")
+    public UsuarioResponse miPerfil(@AuthenticationPrincipal Jwt jwt) {
+        // No se acepta un ID del cliente: el usuario se obtiene del JWT validado.
+        Long idUsuario = jwt.getClaim("idUsuario");
+        if (idUsuario == null) {
+            throw new ResourceNotFoundException("Usuario autenticado no encontrado");
+        }
+        var usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
+        var response = usuarioMapper.toResponse(usuario);
+        if (usuario.getFotoPerfil() != null) {
+            response.setFotoPerfilUrl("/api/usuarios/me/foto");
+        }
+        return response;
+    }
+
+    @PostMapping(value = "/me/foto", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public UsuarioResponse subirMiFoto(@AuthenticationPrincipal Jwt jwt,
+                                      @RequestParam("foto") MultipartFile foto) {
+        fotoPerfilService.guardar(idActual(jwt), foto);
+        return miPerfil(jwt);
+    }
+
+    @GetMapping("/me/foto")
+    public ResponseEntity<byte[]> consultarMiFoto(@AuthenticationPrincipal Jwt jwt) {
+        var foto = fotoPerfilService.leer(idActual(jwt));
+        return ResponseEntity.ok().contentType(foto.tipo()).body(foto.contenido());
+    }
+
+    @DeleteMapping("/me/foto")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void eliminarMiFoto(@AuthenticationPrincipal Jwt jwt) {
+        fotoPerfilService.eliminar(idActual(jwt));
+    }
+
+    private Long idActual(Jwt jwt) {
+        Long id = jwt.getClaim("idUsuario");
+        if (id == null) throw new ResourceNotFoundException("Usuario autenticado no encontrado");
+        return id;
+    }
+
+    @PatchMapping("/me")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional
+    public UsuarioResponse actualizarContacto(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody pe.edu.utec.vetcare.dto.request.ContactoAdminRequest request) {
+        var u = usuarioRepository.findById(idActual(jwt)).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+        if (request.nroCelular() == null && request.direccion() == null) throw new pe.edu.utec.vetcare.exception.BadRequestException("Indica celular o dirección");
+        if (request.nroCelular() != null) u.setNroCelular(request.nroCelular().trim());
+        if (request.direccion() != null) u.setDireccionContacto(request.direccion().trim());
+        usuarioRepository.saveAndFlush(u);
+        return usuarioMapper.toResponse(u);
+    }
+
+    @GetMapping("/{id}/foto")
+    public ResponseEntity<byte[]> fotoAdministrada(@PathVariable Long id) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
+        var foto = fotoPerfilService.leer(id);
+        return ResponseEntity.ok().contentType(foto.tipo()).body(foto.contenido());
+    }
+    @PostMapping(value="/{id}/foto", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
+    public void guardarFotoAdministrada(@PathVariable Long id, @RequestParam("foto") MultipartFile foto) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin(); fotoPerfilService.guardar(id,foto);
+    }
+    @DeleteMapping("/{id}/foto")
+    public void borrarFotoAdministrada(@PathVariable Long id) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin(); fotoPerfilService.eliminar(id);
+    }
 
     @GetMapping
     public List<UsuarioResponse> listar() {

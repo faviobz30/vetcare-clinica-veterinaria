@@ -16,5 +16,7 @@ public interface AtencionService {
 
     AtencionResponse update(Long id, UpdateAtencionRequest request);
 
+    AtencionResponse actualizarPrecio(Long id, java.math.BigDecimal precio);
+
     void delete(Long id);
 }

@@ -1,0 +1,3 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><title>QA adaptable · Historial veterinario</title><body style="margin:0;background:#eee"><script>
+const width=Math.max(320,Math.min(1500,Number(new URLSearchParams(location.search).get('width'))||390));const frame=document.createElement('iframe');frame.style=`width:${width}px;height:1000px;border:0;display:block`;frame.title=`Historial veterinario ${width} px`;frame.src='./veterinary-history.html?captura=1'+(new URLSearchParams(location.search).has('shell')?'&shell=1':'')+(new URLSearchParams(location.search).get('role')==='owner'?'&role=owner':'');document.body.append(frame)
+</script></body></html>

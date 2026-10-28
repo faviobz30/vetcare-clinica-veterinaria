@@ -22,4 +22,6 @@ public class MascotaResponse {
     private String sexo;
 
     private LocalDate fechaNacimiento;
+
+    private boolean tieneFoto;
 }

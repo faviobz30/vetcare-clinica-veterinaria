@@ -51,12 +51,7 @@ public class VeterinarioController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody Map<String, Object> campos) {
 
-        if (campos.containsKey("especialidad") || campos.containsKey("nroColegiatura")) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Solo ADMIN puede modificar los datos profesionales del veterinario"));
-        }
-
-        Set<String> permitidos = Set.of("nombres", "apellidos", "nroCelular");
+        Set<String> permitidos = Set.of("nroCelular", "direccion");
         for (String campo : campos.keySet()) {
             if (!permitidos.contains(campo)) {
                 throw new BadRequestException("Campo no permitido: " + campo);
@@ -64,9 +59,8 @@ public class VeterinarioController {
         }
 
         ActualizarPerfilVeterinarioRequest request = new ActualizarPerfilVeterinarioRequest();
-        request.setNombres(leerTexto(campos, "nombres"));
-        request.setApellidos(leerTexto(campos, "apellidos"));
         request.setNroCelular(leerTexto(campos, "nroCelular"));
+        request.setDireccion(leerTexto(campos, "direccion"));
 
         var errores = validator.validate(request);
         if (!errores.isEmpty()) {

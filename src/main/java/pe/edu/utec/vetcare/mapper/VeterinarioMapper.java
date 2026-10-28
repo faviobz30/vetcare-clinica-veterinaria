@@ -13,16 +13,20 @@ public interface VeterinarioMapper {
 
     @Mapping(target = "idVeterinario", ignore = true)
     @Mapping(target = "usuario", ignore = true)
+    @Mapping(target = "tratamientoProfesional", ignore = true)
     VeterinarioEntity toEntity(CreateVeterinarioRequest request);
 
     @Mapping(
             source = "usuario.idUsuario",
             target = "idUsuario"
     )
+    @Mapping(source = "usuario.nombres", target = "nombres")
+    @Mapping(source = "usuario.apellidos", target = "apellidos")
     VeterinarioResponse toResponse(VeterinarioEntity entity);
 
     @Mapping(target = "idVeterinario", ignore = true)
     @Mapping(target = "usuario", ignore = true)
+    @Mapping(target = "tratamientoProfesional", ignore = true)
     void updateEntity(
             UpdateVeterinarioRequest request,
             @MappingTarget VeterinarioEntity entity

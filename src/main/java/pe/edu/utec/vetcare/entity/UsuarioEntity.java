@@ -71,12 +71,18 @@ public class UsuarioEntity {
     )
     private String nroCelular;
 
+    @Column(name = "direccion_contacto", length = 200)
+    private String direccionContacto;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "id_rol",
             nullable = false
     )
     private RolEntity rol;
+
+    @Column(name = "foto_perfil", length = 255)
+    private String fotoPerfil;
 
     @Column(
             name = "fecha_registro",

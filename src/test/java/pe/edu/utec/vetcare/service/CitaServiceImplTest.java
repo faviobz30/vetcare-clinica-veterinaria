@@ -44,6 +44,9 @@ class CitaServiceImplTest {
     @Mock
     private CitaMapper citaMapper;
 
+    @Mock SeguimientoCitaService seguimiento;
+    @Mock HorarioReservaCitas reservas;
+    @Mock ReglasHorarioAtencion reloj;
     private CitaServiceImpl citaService;
 
     @BeforeEach
@@ -57,7 +60,7 @@ class CitaServiceImplTest {
                         citaRepository,
                         veterinarioRepository,
                         mascotaRepository,
-                        citaMapper
+                        citaMapper, seguimiento, reservas, reloj
                 );
     }
 

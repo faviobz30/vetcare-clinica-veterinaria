@@ -1,0 +1,96 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Historial del propietario</title><body style="background:#F8F7FC"><div id="root"></div><script type="module">
+// Fixture aislada: solo datos sintéticos en memoria. Bloquea todas las escrituras y no usa la API.
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter, Routes, Route, Link} from 'react-router-dom'
+import Atenciones from '/src/pages/Atenciones.jsx'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import HistoriaClinica from '/src/pages/HistoriaClinica.jsx'
+import {api} from '/src/lib/api.js'
+import '/src/index.css'
+const h=React.createElement
+if(new URLSearchParams(location.search).has('captura')){
+ const style=document.createElement('style');style.textContent='main>button,main>#qa-result,main>a{display:none!important} main>p:first-child{margin-bottom:12px!important}';document.head.append(style)
+}
+const token=['qa',btoa(JSON.stringify({idUsuario:321,rol:'PROPIETARIO',sub:'qa@example.invalid',exp:4102444800})),'qa'].join('.')
+sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role','PROPIETARIO')
+const pets=[{idMascota:1,idPropietario:1,nombre:'Paciente QA A',nombrePropietario:'Cuenta sintética',especie:'Canino',raza:'Prueba',sexo:'Hembra',fechaNacimiento:'2023-07-20',tieneFoto:false},{idMascota:2,idPropietario:1,nombre:'Paciente QA B',especie:'Felino',sexo:'Macho',fechaNacimiento:'2026-02-12',tieneFoto:false},{idMascota:3,idPropietario:1,nombre:'Paciente QA vacío',especie:'Felino'}]
+const visits=Array.from({length:4},(_,i)=>({idAtencion:i+1,idHistoria:10,idCita:i+1,idVeterinario:1,fechaAtencion:`2026-10-${String(20-i*3).padStart(2,'0')}T18:14:00`,peso:12.5-i*.2,diagnostico:'Diagnóstico sintético '+(i+1),sintoma:'Síntomas exclusivos de QA',tratamiento:'Tratamiento íntegro de QA\nSegunda línea',observacion:'Observaciones clínicas de prueba'}))
+visits.push({idAtencion:5,idHistoria:20,idVeterinario:1,fechaAtencion:'2026-10-20T10:00:00',peso:4.1,diagnostico:'Consulta exclusiva B'})
+const vaccines=[{idVacuna:1,idMascota:1,idVeterinario:1,nombre:'Vacuna sintética A',fechaAplicacion:'2026-09-20',proximaDosis:'2026-11-20',estadoAplicacion:'APLICADA',estadoProximaDosis:'PROGRAMADA',observaciones:'Observación de prueba A\n'+ 'Texto clínico íntegro con acentos áéíóúñ. '.repeat(10)},{idVacuna:2,idMascota:2,idVeterinario:1,nombre:'Vacuna exclusiva B',fechaAplicacion:'2026-09-22',proximaDosis:'2026-12-22',estadoAplicacion:'APLICADA',estadoProximaDosis:'PROGRAMADA'}]
+vaccines.push({idVacuna:3,idMascota:1,idVeterinario:1,nombre:'QA próxima sin observaciones',proximaDosis:'2026-12-20',estadoProximaDosis:'PROGRAMADA'}, {idVacuna:4,idMascota:1,idVeterinario:1,nombre:'QA aplicación sin información adicional',fechaAplicacion:'2026-08-20',estadoAplicacion:'APLICADA'}, {idVacuna:5,idMascota:1,idVeterinario:1,nombre:'QA aplicación con próxima dosis',fechaAplicacion:'2026-07-20',proximaDosis:'2026-12-25',estadoAplicacion:'APLICADA',estadoProximaDosis:'PROGRAMADA'})
+api.defaults.adapter=async config=>{
+ if(config.method!=='get')throw Error('La fixture prohíbe escrituras')
+ let data
+ const url=config.url
+ if(url==='/usuarios/me')data={idUsuario:321,nombres:'Cuenta',apellidos:'Sintética',nroCelular:'000000000',rol:'PROPIETARIO'}
+ else if(url==='/propietarios/me')data={idPropietario:1}
+ else if(url==='/mascotas')data=pets
+ else if(/^\/mascotas\/\d+$/.test(url))data=pets.find(p=>p.idMascota===Number(url.split('/').at(-1)))
+ else if(url.startsWith('/historias-clinicas/mascota/')){const id=Number(url.split('/').at(-1)); await new Promise(r=>setTimeout(r,id===2?180:40));data={idHistoria:id*10,idMascota:id,fechaApertura:id===3?null:'2026-01-01T09:00:00',antecedentes:id===1?{estadoAlergias:'ALERGIAS_REGISTRADAS',alergiasSustancias:'Sustancia sintética A',alergiasReacciones:'Reacción de prueba',enfermedadesRelevantes:'Seguimiento de condición de prueba',cirugiasPrevias:'Procedimiento previo · 2025-03-10 · observación',notasMedicas:'Cuidados de prueba A',alertasMedicas:'Alerta sintética A',actualizadoEn:'2026-10-20T18:30:00',veterinarioNombre:'Profesional QA'}:id===2?{estadoAlergias:'SIN_ALERGIAS_CONOCIDAS',notasMedicas:'Notas exclusivas B',actualizadoEn:'2026-10-20T10:30:00',veterinarioNombre:'Profesional QA'}:{estadoAlergias:'NO_EVALUADAS'}}}
+ else if(url==='/atenciones')data=visits
+ else if(url.startsWith('/atenciones/'))data=visits.find(a=>a.idAtencion===Number(url.split('/').at(-1)))
+ else if(url==='/citas')data=[]
+ else if(url.startsWith('/vacunas/mascota/'))data=vaccines // Intencional: la composición debe filtrar incluso una colección mixta.
+ else if(url==='/veterinarios')data=[{idVeterinario:1,nombres:'Profesional',apellidos:'QA',especialidad:'Prueba'}]
+ if(data===undefined)throw {response:{status:404,data:{error:'No disponible en QA'}},config}
+ return {data,status:200,statusText:'OK',headers:{},config}
+}
+const waitFor=async predicate=>{for(let i=0;i<150;i++){if(predicate())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+const findButton=label=>[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===label)
+const clickTab=label=>[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent===label).click()
+async function checkUI(){
+ const output=document.getElementById('qa-result');const passed=[]
+ const assert=(ok,name)=>{if(!ok)throw Error(name);passed.push(name)}
+ try{
+ await waitFor(()=>document.querySelector('.owner-history-identity'))
+ if(document.querySelector('.owner-history-identity h2').textContent!=='Paciente QA A'){
+ document.querySelector('[aria-label="Seleccionar mascota del expediente"]').click();await waitFor(()=>document.querySelector('[role=option]'));[...document.querySelectorAll('[role=option]')].find(b=>b.textContent==='Paciente QA A').click();await waitFor(()=>document.querySelector('.owner-history-identity h2')?.textContent==='Paciente QA A')
+ }
+ clickTab('Resumen');await waitFor(()=>document.querySelector('.owner-history-visits'))
+ assert(document.querySelectorAll('[role=tab]').length===3,'Tres pestañas reales')
+ assert(document.querySelector('.owner-history-identity small').textContent==='Apertura del historial clínico: 01/01/2026','Encabezado sin numeración interna')
+ assert(!document.querySelector('.owner-home-treatment'),'Tarjeta redundante de tratamiento eliminada')
+ assert(document.querySelectorAll('.owner-pet-field').length===7,'Identificación distribuida en campos compactos')
+ assert(document.querySelectorAll('.owner-history-visits li').length===3,'Tres últimas atenciones')
+ const next=[...document.querySelectorAll('.owner-history-link')].find(b=>b.textContent.includes('Ver todas'));next.click();await waitFor(()=>document.querySelector('[role=tab][aria-selected=true]')?.textContent==='Vacunas')
+ assert(document.querySelector('[role=tabpanel]').textContent.includes('Vacuna sintética A')&&!document.querySelector('[role=tabpanel]').textContent.includes('Vacuna exclusiva B'),'Ver todas abre vacunas de A')
+
+ const vaccineRows=[...document.querySelectorAll('.owner-vaccine-list.expanded li')]
+ const noInfo=vaccineRows.find(li=>li.textContent.includes('QA aplicación sin información adicional'))
+ assert(noInfo&&!noInfo.querySelector('details'),'Sin información adicional no hay desplegable vacío')
+ const noObservation=vaccineRows.find(li=>li.textContent.includes('QA próxima sin observaciones'))
+ assert(noObservation&&!noObservation.querySelector('details'),'No duplica próxima fecha en fila sin observaciones')
+ const row=vaccineRows.find(li=>li.querySelector('h3')?.textContent==='Vacuna sintética A'),summary=row.querySelector('summary')
+ assert(summary.textContent==='Ver detalle','Enlace cerrado con texto Ver detalle')
+ summary.click();await waitFor(()=>summary.textContent==='Ocultar detalle')
+ assert(row.querySelector('.owner-history-preserve').textContent===vaccines[0].observaciones,'Observaciones largas íntegras y con saltos')
+ assert(!row.querySelector('.owner-vaccine-details>div').textContent.includes('20/11/2026'),'Detalle no repite fecha visible')
+ summary.click();await waitFor(()=>summary.textContent==='Ver detalle')
+ assert(!row.querySelector('details').open,'Ocultar detalle cierra el contenido')
+ const nextOnly=vaccineRows.find(li=>li.textContent.includes('QA aplicación con próxima dosis')&&li.querySelector('details'))
+ nextOnly.querySelector('summary').click();await waitFor(()=>nextOnly.querySelector('details').open)
+ assert(nextOnly.querySelector('.owner-vaccine-details>div').textContent.includes('25/12/2026'),'Aplicación conserva próxima dosis complementaria')
+ clickTab('Antecedentes');await waitFor(()=>document.querySelector('[role=tabpanel]').textContent.includes('Sustancia sintética A'))
+ assert(![...document.querySelectorAll('.owner-history button')].some(b=>/Editar|Eliminar|Agregar/.test(b.textContent)),'Propietario sin controles de edición')
+ clickTab('Resumen');await waitFor(()=>document.querySelector('.owner-history-visits button'));document.querySelector('.owner-history-visits button').click();await waitFor(()=>document.querySelector('[role=dialog]')?.textContent.includes('Tratamiento íntegro de QA'))
+ assert(document.querySelector('[role=dialog]').textContent.includes('Paciente QA A'),'Detalle existente con mascota correcta');document.querySelector('[aria-label="Cerrar detalle"]').click()
+ document.querySelector('[aria-label="Seleccionar mascota del expediente"]').click();await waitFor(()=>document.querySelector('[role=option]'));[...document.querySelectorAll('[role=option]')].find(b=>b.textContent==='Paciente QA B').click()
+ await waitFor(()=>!document.querySelector('.owner-history-identity'))
+ assert(!document.querySelector('.owner-history').textContent.includes('Sustancia sintética A'),'Cambio oculta inmediatamente expediente anterior')
+ await waitFor(()=>document.querySelector('.owner-history-identity h2')?.textContent==='Paciente QA B')
+ assert(document.querySelector('[role=tab][aria-selected=true]').textContent==='Resumen','Cambio de mascota reinicia pestaña')
+ assert(document.querySelector('.owner-history-visits').textContent.includes('Consulta exclusiva B')&&!document.querySelector('.owner-history-visits').textContent.includes('Diagnóstico sintético'),'Atenciones aisladas B')
+ assert(document.querySelector('.owner-history-single-weight').textContent.includes('4.1')&&!document.querySelector('.owner-history-single-weight svg[role=img]'),'Una medición sin tendencia ficticia')
+ assert(document.querySelector('.owner-history-single-weight').textContent.includes('Con las próximas mediciones'),'Mensaje de peso con una medición')
+ clickTab('Vacunas');await waitFor(()=>document.querySelector('[role=tabpanel]').textContent.includes('Vacuna exclusiva B'));assert(!document.querySelector('[role=tabpanel]').textContent.includes('Vacuna sintética A'),'Vacunas aisladas B')
+ clickTab('Antecedentes');await waitFor(()=>document.querySelector('[role=tabpanel]').textContent.includes('Notas exclusivas B'));assert(!document.querySelector('[role=tabpanel]').textContent.includes('Sustancia sintética A'),'Antecedentes aislados B')
+ document.querySelector('[aria-label="Seleccionar mascota del expediente"]').click();await waitFor(()=>document.querySelector('[role=option]'));[...document.querySelectorAll('[role=option]')].find(b=>b.textContent==='Paciente QA vacío').click();await waitFor(()=>document.querySelector('.owner-history-identity h2')?.textContent==='Paciente QA vacío')
+ assert(document.querySelector('[role=tabpanel]').textContent.includes('Todavía no hay mediciones'),'Sin pesos ni puntos ficticios')
+ clickTab('Antecedentes');await waitFor(()=>document.querySelector('[role=tabpanel]').textContent.includes('pendiente de evaluación'));assert(!document.querySelector('[role=tabpanel]').textContent.includes('Sin alergias conocidas'),'Vacío no equivale a ausencia confirmada')
+ output.textContent=`APROBADO: ${passed.length} comprobaciones UI · ${passed.join(' · ')}`
+ }catch(error){output.textContent='FALLO: '+error.message;throw error}
+}
+function QA(){return h(MemoryRouter,null,h(AuthProvider,null,h('main',{style:{maxWidth:'1220px',margin:'auto',padding:'24px'}},h('p',{style:{fontSize:'12px',color:'#6B7280'}},'QA AISLADA · Datos sintéticos · Sin API ni PostgreSQL'),h('button',{className:'btn btn-ghost',onClick:checkUI},'Ejecutar comprobaciones UI'),h('p',{id:'qa-result',role:'status',style:{fontSize:'12px',margin:'8px 0'}},'Pendiente'),h(Link,{to:'/panel/historias',style:{fontSize:'12px'}},'Regresar al historial QA'),h(Routes,null,h(Route,{path:'/panel/atenciones',element:h(Atenciones)}),h(Route,{path:'*',element:h(HistoriaClinica)}))))) }
+createRoot(document.getElementById('root')).render(h(QA))
+</script></body></html>

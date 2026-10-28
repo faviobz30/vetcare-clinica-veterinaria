@@ -21,6 +21,13 @@ public class CitaController {
         this.citaService = citaService;
     }
 
+    @GetMapping("/disponibilidad")
+    public ResponseEntity<pe.edu.utec.vetcare.dto.response.DisponibilidadCitaResponse> disponibilidad(
+            @RequestParam("idVeterinario") Long idVeterinario,@RequestParam("fecha") @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate fecha,
+            @RequestParam(value="excluirCita",required=false) Long excluirCita) {
+        return ResponseEntity.ok(citaService.disponibilidad(idVeterinario,fecha,excluirCita));
+    }
+
     @GetMapping
     public ResponseEntity<List<CitaResponse>> getAll() {
         return ResponseEntity.ok(citaService.getAll());
@@ -57,10 +64,10 @@ public class CitaController {
         return ResponseEntity.ok(citaService.confirm(id));
     }
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'PROPIETARIO')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PROPIETARIO', 'VETERINARIO')")
     @PutMapping("/{id}/cancelar")
-    public ResponseEntity<CitaResponse> cancel(@PathVariable Long id) {
-        return ResponseEntity.ok(citaService.cancel(id));
+    public ResponseEntity<CitaResponse> cancel(@PathVariable Long id, @Valid @RequestBody pe.edu.utec.vetcare.dto.request.CancelarCitaRequest request) {
+        return ResponseEntity.ok(citaService.cancel(id, request));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'VETERINARIO')")

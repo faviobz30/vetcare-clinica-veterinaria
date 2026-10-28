@@ -1,0 +1,3 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><title>QA · Captura de citas clínicas</title><body style="margin:0;background:#F8F7FC"><script>
+const q=new URLSearchParams(location.search),frame=document.createElement('iframe');frame.style=`width:${q.get('width')==='390'?'390':'1280'}px;height:1100px;border:0;display:block`;frame.title='Citas clínicas · revisión aislada';frame.src='./clinical-appointments.html?captura=1&escena='+encodeURIComponent(q.get('escena')||'agenda')+'&role='+encodeURIComponent(q.get('role')||'vet');document.body.append(frame)
+</script></body></html>

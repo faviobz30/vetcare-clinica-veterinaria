@@ -24,23 +24,51 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@org.springframework.transaction.annotation.Transactional
 public class CitaServiceImpl implements CitaService {
 
     private final CitaRepository citaRepository;
     private final VeterinarioRepository veterinarioRepository;
     private final MascotaRepository mascotaRepository;
     private final CitaMapper citaMapper;
+    private final pe.edu.utec.vetcare.service.HorarioReservaCitas reservas;
+    private final pe.edu.utec.vetcare.service.ReglasHorarioAtencion reloj;
+    private final pe.edu.utec.vetcare.service.SeguimientoCitaService seguimiento;
 
     public CitaServiceImpl(
             CitaRepository citaRepository,
             VeterinarioRepository veterinarioRepository,
             MascotaRepository mascotaRepository,
-            CitaMapper citaMapper
+            CitaMapper citaMapper,
+            pe.edu.utec.vetcare.service.SeguimientoCitaService seguimiento,
+            pe.edu.utec.vetcare.service.HorarioReservaCitas reservas,
+            pe.edu.utec.vetcare.service.ReglasHorarioAtencion reloj
     ) {
         this.citaRepository = citaRepository;
         this.veterinarioRepository = veterinarioRepository;
         this.mascotaRepository = mascotaRepository;
         this.citaMapper = citaMapper;
+        this.seguimiento = seguimiento;this.reservas=reservas;this.reloj=reloj;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly=true)
+    public pe.edu.utec.vetcare.dto.response.DisponibilidadCitaResponse disponibilidad(Long vet,java.time.LocalDate fecha,Long excluir) {
+        if(!veterinarioRepository.existsById(vet))throw new ResourceNotFoundException("Veterinario no encontrado");
+        if(esRol("VETERINARIO")&&!veterinarioRepository.findById(vet).orElseThrow().getUsuario().getCorreo().equals(correoActual()))
+            throw new AccessDeniedException("Agenda ajena");
+        if(excluir!=null){var actual=citaRepository.findById(excluir).orElseThrow(()->new ResourceNotFoundException("Cita no encontrada"));comprobarActualizacion(actual);
+            if(!actual.getVeterinario().getIdVeterinario().equals(vet))throw new AccessDeniedException("La cita no corresponde al veterinario");}
+        var ahora=reloj.ahora();var horarios=new java.util.ArrayList<pe.edu.utec.vetcare.dto.response.DisponibilidadCitaResponse.Horario>();
+        if(reservas.abierto(fecha)){
+            var ocupadas=citaRepository.reservasDelDia(vet,fecha.atStartOfDay().minusMinutes(30),fecha.plusDays(1).atStartOfDay());
+            for(var inicio=fecha.atTime(reservas.apertura());!inicio.plusMinutes(30).isAfter(fecha.atTime(reservas.cierre()));inicio=inicio.plusMinutes(30)){
+                final var desde=inicio;var fin=inicio.plusMinutes(30);
+                boolean libre=inicio.isAfter(ahora)&&ocupadas.stream().filter(c->!c.getIdCita().equals(excluir)).noneMatch(c->c.getFechaCita().isBefore(fin)&&c.getFechaCita().plusMinutes(30).isAfter(desde));
+                horarios.add(new pe.edu.utec.vetcare.dto.response.DisponibilidadCitaResponse.Horario(inicio,fin,libre));
+            }
+        }
+        return new pe.edu.utec.vetcare.dto.response.DisponibilidadCitaResponse(vet,fecha,"America/Lima",ahora,reservas.apertura(),reservas.cierre(),30,horarios);
     }
 
     @Override
@@ -48,7 +76,7 @@ public class CitaServiceImpl implements CitaService {
 
         return citasVisibles()
                 .stream()
-                .map(citaMapper::toResponse)
+                .map(this::respuesta)
                 .toList();
     }
 
@@ -64,12 +92,14 @@ public class CitaServiceImpl implements CitaService {
                         );
 
         comprobarLectura(entity);
-        return citaMapper.toResponse(entity);
+        return respuesta(entity);
     }
 
     @Override
     public CitaResponse create(
             CreateCitaRequest request) {
+
+
 
         VeterinarioEntity veterinario =
                 veterinarioRepository
@@ -94,6 +124,9 @@ public class CitaServiceImpl implements CitaService {
                         );
 
         comprobarCreacion(mascota);
+        seguimiento.validarFuturo(request.getFechaCita());
+        reservas.validar(request.getFechaCita());
+        seguimiento.serializarAgenda(request.getIdVeterinario());
 
         LocalDateTime inicioComparacion =
                 request.getFechaCita()
@@ -127,7 +160,7 @@ public class CitaServiceImpl implements CitaService {
         CitaEntity savedEntity =
                 citaRepository.save(entity);
 
-        return citaMapper.toResponse(savedEntity);
+        return respuesta(savedEntity);
     }
 
     @Override
@@ -136,7 +169,7 @@ public class CitaServiceImpl implements CitaService {
             UpdateCitaRequest request) {
 
         CitaEntity entity =
-                citaRepository.findById(id)
+                citaRepository.findByIdForUpdate(id)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Cita no encontrada"
@@ -144,6 +177,11 @@ public class CitaServiceImpl implements CitaService {
                         );
 
         comprobarActualizacion(entity);
+        seguimiento.validarFuturo(request.getFechaCita());
+        reservas.validar(request.getFechaCita());
+        seguimiento.serializarAgenda(entity.getVeterinario().getIdVeterinario());
+        seguimiento.invalidarRegularizacion(entity);
+        entity.setInicioRegistro(null); entity.setIdUsuarioInicio(null);
 
         LocalDateTime inicioComparacion =
                 request.getFechaCita()
@@ -178,14 +216,14 @@ public class CitaServiceImpl implements CitaService {
         CitaEntity updatedEntity =
                 citaRepository.save(entity);
 
-        return citaMapper.toResponse(updatedEntity);
+        return respuesta(updatedEntity);
     }
 
     @Override
     public void delete(Long id) {
 
         CitaEntity entity =
-                citaRepository.findById(id)
+                citaRepository.findByIdForUpdate(id)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Cita no encontrada"
@@ -193,9 +231,10 @@ public class CitaServiceImpl implements CitaService {
                         );
 
         comprobarAdministrador();
-        if (entity.getEstado() == EstadoCita.ATENDIDA || entity.getEstado() == EstadoCita.CANCELADA) {
+        if (entity.getEstado() == EstadoCita.ATENDIDA || entity.getEstado() == EstadoCita.CANCELADA || entity.getEstado() == EstadoCita.NO_ASISTIO) {
             throw new EstadoCitaInvalidoException("No se puede eliminar una cita " + entity.getEstado());
         }
+        seguimiento.comprobarEliminacion(entity);
         citaRepository.delete(entity);
     }
 
@@ -203,7 +242,7 @@ public class CitaServiceImpl implements CitaService {
     public CitaResponse confirm(Long id) {
 
         CitaEntity entity =
-                citaRepository.findById(id)
+                citaRepository.findByIdForUpdate(id)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Cita no encontrada"
@@ -224,16 +263,16 @@ public class CitaServiceImpl implements CitaService {
                 EstadoCita.CONFIRMADA
         );
 
-        return citaMapper.toResponse(
+        return respuesta(
                 citaRepository.save(entity)
         );
     }
 
     @Override
-    public CitaResponse cancel(Long id) {
+    public CitaResponse cancel(Long id, pe.edu.utec.vetcare.dto.request.CancelarCitaRequest request) {
 
         CitaEntity entity =
-                citaRepository.findById(id)
+                citaRepository.findByIdForUpdate(id)
                         .orElseThrow(() ->
                                 new ResourceNotFoundException(
                                         "Cita no encontrada"
@@ -252,11 +291,12 @@ public class CitaServiceImpl implements CitaService {
             );
         }
 
+        seguimiento.registrarCancelacion(entity, request);
         entity.setEstado(
                 EstadoCita.CANCELADA
         );
 
-        return citaMapper.toResponse(
+        return respuesta(
                 citaRepository.save(entity)
         );
     }
@@ -265,7 +305,7 @@ public class CitaServiceImpl implements CitaService {
     public CitaResponse attend(Long id) {
         // Se mantiene la ruta por compatibilidad, pero no permite cerrar
         // una consulta sin registrar la atención clínica.
-        CitaEntity entity = citaRepository.findById(id)
+        CitaEntity entity = citaRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada"));
         comprobarVeterinarioDeCita(entity);
         throw new EstadoCitaInvalidoException(
@@ -319,9 +359,15 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private void comprobarActualizacion(CitaEntity cita) {
+        if (cita.getEstado() == EstadoCita.ATENDIDA || cita.getEstado() == EstadoCita.CANCELADA || cita.getEstado() == EstadoCita.NO_ASISTIO) {
+            throw new EstadoCitaInvalidoException("No se puede reprogramar una cita " + cita.getEstado());
+        }
         if (esRol("ADMIN")) return;
         if (esRol("PROPIETARIO") && esSuPropietario(cita)
-                && cita.getEstado() == EstadoCita.PENDIENTE) return;
+                && cita.getEstado() == EstadoCita.PENDIENTE) {
+            seguimiento.validarGestionPropietario(cita);
+            return;
+        }
         throw new AccessDeniedException("No puede actualizar esta cita");
     }
 
@@ -331,11 +377,18 @@ public class CitaServiceImpl implements CitaService {
     }
 
     private void comprobarCancelacion(CitaEntity cita) {
-        if (esRol("ADMIN") || (esRol("PROPIETARIO") && esSuPropietario(cita))) return;
+        if (esRol("ADMIN") || (esRol("VETERINARIO") && esSuVeterinario(cita))) return;
+        if (esRol("PROPIETARIO") && esSuPropietario(cita)) {
+            seguimiento.validarGestionPropietario(cita);
+            return;
+        }
         throw new AccessDeniedException("No puede cancelar esta cita");
     }
 
     private void comprobarAdministrador() {
         if (!esRol("ADMIN")) throw new AccessDeniedException("Operación exclusiva de ADMIN");
+    }
+    private CitaResponse respuesta(CitaEntity cita) {
+        return seguimiento.completar(cita, citaMapper.toResponse(cita));
     }
 }

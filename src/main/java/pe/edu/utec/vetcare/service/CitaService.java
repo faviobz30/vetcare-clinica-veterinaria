@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface CitaService {
 
+    pe.edu.utec.vetcare.dto.response.DisponibilidadCitaResponse disponibilidad(Long veterinario,java.time.LocalDate fecha,Long excluir);
+
     List<CitaResponse> getAll();
 
     CitaResponse getById(Long id);
@@ -20,7 +22,7 @@ public interface CitaService {
 
     CitaResponse confirm(Long id);
 
-    CitaResponse cancel(Long id);
+    CitaResponse cancel(Long id, pe.edu.utec.vetcare.dto.request.CancelarCitaRequest request);
 
     CitaResponse attend(Long id);
 }

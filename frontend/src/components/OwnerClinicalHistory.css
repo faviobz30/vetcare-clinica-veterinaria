@@ -1,0 +1,108 @@
+.owner-history{color:#1F2937;background:#F8F7FC;padding:0 0 20px;min-width:0}
+.owner-history h1,.owner-history h2,.owner-history h3,.owner-history p{margin:0}
+.owner-history-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px}
+.owner-history-heading h1{font-size:32px;font-weight:800;line-height:1.2;color:#3B2382;letter-spacing:-.025em}
+.owner-history-heading p{color:#6B7280;margin-top:6px;font-size:16px}
+.owner-history-heading .vet-select{width:240px}
+.owner-history-pet{display:flex;align-items:center;gap:22px;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:15px;padding:20px}
+.owner-history-identity{flex:1;min-width:0}
+.owner-history-identity h2{color:#3B2382;font-size:27px;font-weight:800;line-height:1.2}
+.owner-history-identity p{font-size:13px;color:#6B7280;margin-top:4px;overflow-wrap:anywhere;line-height:1.45}
+.owner-history-identity small{display:block;color:#6B7280;margin-top:6px;font-size:12px}
+.owner-history-latest{display:flex;flex-direction:column;border-left:1px solid #E5E7EB;padding-left:24px;gap:5px;max-width:220px;min-width:170px}
+.owner-history-latest>span,.owner-history-latest small{font-size:12px;color:#6B7280}
+.owner-history-latest strong{font-size:28px;color:#3B2382;line-height:1.3}
+.owner-history-latest strong small{font-size:15px}
+.owner-history-tabs{display:flex;gap:6px;margin:10px 0 14px;border-bottom:1px solid #E5E7EB}
+.owner-history-tabs button{padding:13px 28px;border-radius:10px 10px 0 0;border:1px solid transparent;border-bottom:2px solid transparent;color:#3B2382;font-size:14px;font-weight:700;background:transparent}
+.owner-history-tabs [aria-selected=true]{background:#D1FAE5;color:#065f46;border-bottom-color:#10B981}
+.owner-history button{cursor:pointer}
+.owner-history button:focus-visible,.owner-history a:focus-visible,.owner-history summary:focus-visible,.owner-history [role=tabpanel]:focus-visible{outline:3px solid #5232B1;outline-offset:3px}
+.owner-history-panels{display:grid;gap:16px}
+.owner-history-top-grid,.owner-history-bottom-grid,.owner-antecedents-grid{display:grid;grid-template-columns:1fr 1.05fr;gap:16px;align-items:start}
+.owner-history-card{background:#FFFFFF;border:1px solid #E5E7EB;border-radius:15px;padding:18px 20px;min-width:0;box-shadow:0 1px 2px #3b238205}
+.owner-history-card>header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.owner-history-card h2{font-size:18px;line-height:1.3;font-weight:750;color:#3B2382;display:flex;align-items:center;gap:10px}
+.owner-history-card h2 svg{flex-shrink:0}
+.owner-section-description{font-size:13px;color:#6B7280;margin:4px 0 8px 32px!important;line-height:1.4}
+.owner-history-link{display:inline-flex;align-items:center;gap:2px;color:#5232B1;font-size:12px;font-weight:600;white-space:nowrap}
+.owner-important-link{display:flex;margin-left:auto;margin-top:5px}
+.owner-clinical-row{display:flex;align-items:flex-start;gap:14px;padding:14px 0;min-width:0}
+.owner-clinical-row+.owner-clinical-row{border-top:1px solid #E5E7EB}
+.owner-clinical-row>div{flex:1;min-width:0}
+.owner-clinical-row h3{font-size:13px;font-weight:700;color:#1F2937;margin:1px 0 4px}
+.owner-clinical-row p{font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;color:#6B7280}
+.owner-row-icon{display:grid;place-items:center;width:44px;height:44px;min-width:44px;background:#F8F7FC;color:#5232B1;border-radius:50%}
+.owner-clinical-row.confirmed .owner-row-icon{background:#D1FAE5;color:#047857}
+.owner-clinical-row.warning{background:#fff8ee;border-radius:12px;padding:12px;margin:8px 0;border:0}
+.owner-clinical-row.warning .owner-row-icon{color:#a65b12;background:#fff0dc}
+.owner-clinical-row.warning p{color:#805c17}
+.owner-clinical-row.compact p{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.owner-history-warning{background:#fff8ee;color:#805c17;border:1px solid #f2e4c5;padding:12px;border-radius:10px;font-size:13px;margin-bottom:14px;overflow-wrap:anywhere}
+.owner-history-warning button{color:#5232B1;text-decoration:underline;margin-left:5px}
+.owner-history-empty{padding:15px 0;color:#6B7280;font-size:13px;line-height:1.5}
+.owner-history-message{padding:28px;background:#FFFFFF;border:1px solid #E5E7EB;border-radius:15px;color:#6B7280}
+.owner-history-message button{margin-top:12px;color:#5232B1;font-weight:700}
+.owner-history-caption{color:#6B7280;font-size:12px;line-height:1.5;margin-top:5px!important}
+.owner-vaccine-list,.owner-history-visits{list-style:none;padding:0;margin:0}
+.owner-vaccine-list li{display:grid;grid-template-columns:44px minmax(140px,1.3fr) minmax(130px,1fr) minmax(135px,1fr) auto;align-items:center;gap:14px;padding:13px 0;border-top:1px solid #E5E7EB}
+.owner-vaccine-list.compact li{grid-template-columns:44px minmax(0,1fr) auto;padding:15px 0}
+.owner-vaccine-list.compact li:first-child{border-top:0}
+.owner-vaccine-list h3{font-size:13px;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
+.owner-vaccine-list p{font-size:12px;color:#6B7280;margin-top:4px}
+.owner-vaccine-name{min-width:0}
+.owner-vaccine-vet,.owner-vaccine-date{display:flex;align-items:center;gap:10px;font-size:13px;color:#1F2937;min-width:0}
+.owner-vaccine-vet svg,.owner-vaccine-date svg{color:#5232B1;flex-shrink:0}
+.owner-vaccine-vet span{overflow-wrap:anywhere}
+.owner-vaccine-date span{display:flex;flex-direction:column;gap:2px}
+.owner-vaccine-date small{color:#6B7280;font-size:12px}
+.owner-vaccine-details{grid-column:2/-1;font-size:12px;margin-top:-6px}
+.owner-weight-records summary{color:#5232B1;cursor:pointer;width:fit-content}
+.owner-vaccine-details summary{display:inline-flex;align-items:center;gap:5px;color:#3B2382;cursor:pointer;width:fit-content;list-style:none}
+.owner-vaccine-details summary::-webkit-details-marker{display:none}
+.owner-vaccine-details summary::marker{content:""}
+.owner-vaccine-details summary svg{color:#5232B1;flex-shrink:0}
+.owner-vaccine-details>div{background:#F8F7FC;border:1px solid #E5E7EB;border-radius:8px;padding:10px;margin-top:8px;color:#1F2937;overflow-wrap:anywhere}
+.owner-vaccine-extra+.owner-vaccine-extra{margin-top:10px}
+.owner-vaccine-extra strong{display:block;color:#6B7280;font-size:11px;font-weight:600}
+.owner-vaccine-extra p{color:#1F2937}
+.owner-history-preserve{white-space:pre-wrap;overflow-wrap:anywhere}
+.owner-history-icon{display:grid;place-items:center;background:#F8F7FC;color:#5232B1;width:44px;height:44px;min-width:44px;border-radius:12px}
+.owner-history-badge{font-size:11px;background:#F8F7FC;color:#5232B1;border-radius:20px;padding:6px 13px;white-space:nowrap;justify-self:end}
+.owner-history-badge.positive{background:#D1FAE5;color:#047857}
+.owner-history-badge.overdue{background:#fff0dc;color:#805c17}
+.owner-history-visits li+li{border-top:1px solid #E5E7EB}
+.owner-history-visits button{display:flex;align-items:center;gap:14px;width:100%;padding:14px 0;text-align:left;color:#5232B1}
+.owner-visit-date{display:flex;align-items:center;gap:9px;background:#F8F7FC;border-radius:9px;padding:8px;flex-shrink:0;font-size:11px}
+.owner-visit-date>span{display:flex;flex-direction:column;gap:2px}
+.owner-visit-date svg{flex-shrink:0}
+.owner-visit-diagnosis{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.owner-history-visits small{color:#6B7280;font-size:11px}
+.owner-history-visits strong{color:#1F2937;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owner-weight-chart{width:100%;height:auto;max-height:220px;min-height:150px}
+.owner-weight-latest{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}
+.owner-weight-latest>div{display:flex;flex-direction:column;gap:3px}
+.owner-weight-latest span,.owner-weight-latest small{color:#6B7280;font-size:12px}
+.owner-weight-latest strong{color:#3B2382;font-size:28px;line-height:1.2}
+.owner-weight-latest strong small{font-size:15px}
+.owner-weight-latest .owner-weight-neutral{width:60px;height:60px;display:grid;place-items:center;border-radius:50%;background:#F8F7FC;color:#5232B1}
+.owner-weight-note{display:flex;align-items:center;gap:10px;background:#F8F7FC;border-radius:10px;padding:12px;font-size:12px;color:#6B7280;line-height:1.5}
+.owner-weight-note svg{color:#3B2382;flex-shrink:0}
+.owner-weight-records{font-size:12px;margin-top:10px}
+.owner-weight-records table{width:100%;border-collapse:collapse;margin-top:10px;text-align:left}
+.owner-weight-records th,.owner-weight-records td{padding:8px;border-bottom:1px solid #E5E7EB}
+.owner-weight-records th{color:#3B2382}
+.owner-antecedents-column{display:grid;gap:16px;min-width:0}
+@media(max-width:1100px){.owner-vaccine-list.expanded li{grid-template-columns:44px minmax(130px,1.3fr) minmax(120px,1fr) auto}.owner-vaccine-vet{grid-column:2/3;grid-row:2}.owner-vaccine-date{grid-column:3/4;grid-row:1/3}.owner-vaccine-list.expanded .owner-history-badge{grid-column:4;grid-row:1/3}.owner-vaccine-details{grid-row:3}.owner-history-card{padding:16px}.owner-visit-date{gap:5px;padding:7px}.owner-history-visits button{gap:9px}}
+@media(max-width:850px){.owner-history-top-grid,.owner-history-bottom-grid,.owner-antecedents-grid{grid-template-columns:1fr}.owner-history-pet{gap:16px}.owner-history-latest{min-width:135px;padding-left:16px}.owner-history-card h2{font-size:17px}}
+@media(max-width:600px){.owner-history-heading{align-items:stretch;flex-direction:column;gap:10px}.owner-history-heading .vet-select{width:100%}.owner-history-pet{flex-wrap:wrap;padding:16px;gap:12px}.owner-history-identity{flex-basis:calc(100% - 110px)}.owner-history-identity h2{font-size:24px}.owner-history-identity p{font-size:12px}.owner-history-latest{border-left:0;border-top:1px solid #E5E7EB;padding:12px 0 0;max-width:none;width:100%}.owner-history-tabs{gap:3px}.owner-history-tabs button{padding:12px 10px;flex:1;font-size:13px}.owner-vaccine-list.expanded li{grid-template-columns:36px minmax(0,1fr) auto;gap:10px}.owner-vaccine-list.expanded .owner-history-icon{width:36px;height:36px;min-width:36px}.owner-vaccine-list.expanded .owner-vaccine-vet{grid-column:2;grid-row:2}.owner-vaccine-list.expanded .owner-vaccine-date{grid-column:2;grid-row:3}.owner-vaccine-list.expanded .owner-history-badge{grid-column:3;grid-row:1}.owner-vaccine-details{grid-column:2/-1;grid-row:4}.owner-history-card h2{font-size:16px}.owner-visit-date{font-size:10px}.owner-vaccine-list.compact li{gap:10px}}
+
+/* Dos columnas de identificación, compartidas por ambos roles. */
+.owner-pet-columns{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,max-content);justify-content:start;align-items:start;gap:12px 32px}
+.owner-pet-columns>div{min-width:0}
+.owner-opening-date{font-weight:600;color:#1F2937}
+.owner-pet-traits,.owner-pet-details{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:baseline;gap:4px 8px;margin:5px 0 0}
+.owner-pet-field{display:grid;grid-column:1/-1;grid-template-columns:subgrid;align-items:baseline;min-width:0}
+.owner-pet-field dt{font-size:11px;color:#6B7280;overflow-wrap:anywhere}
+.owner-pet-field dd{min-width:0;margin:0;color:#1F2937;font-size:13px;font-weight:600;line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:600px){.owner-history-heading h1{font-size:28px}.owner-history-heading p{font-size:14px}.owner-pet-columns{grid-template-columns:minmax(0,1fr);gap:6px}.owner-pet-traits,.owner-pet-details{grid-template-columns:fit-content(45%) minmax(0,1fr);gap:3px 8px}.owner-pet-field dd{font-size:12px}}

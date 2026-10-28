@@ -30,22 +30,25 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     private final VeterinarioMapper veterinarioMapper;
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
+    private final pe.edu.utec.vetcare.service.UsuarioService usuarios;
 
     public VeterinarioServiceImpl(
             VeterinarioRepository veterinarioRepository,
             UsuarioRepository usuarioRepository,
             VeterinarioMapper veterinarioMapper,
             RolRepository rolRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder, pe.edu.utec.vetcare.service.UsuarioService usuarios) {
 
         this.veterinarioRepository = veterinarioRepository;
         this.usuarioRepository = usuarioRepository;
         this.veterinarioMapper = veterinarioMapper;
         this.rolRepository = rolRepository;
         this.passwordEncoder = passwordEncoder;
+        this.usuarios = usuarios;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<VeterinarioResponse> getAll() {
 
         return veterinarioRepository.findAll()
@@ -67,27 +70,17 @@ public class VeterinarioServiceImpl implements VeterinarioService {
         VeterinarioEntity veterinario = buscarPorCorreoAutenticado(correoAutenticado);
         UsuarioEntity usuario = veterinario.getUsuario();
 
-        if (request.getNombres() == null && request.getApellidos() == null
-                && request.getNroCelular() == null) {
+        if (request.getNroCelular() == null && request.getDireccion() == null) {
             throw new BadRequestException("Debe indicar al menos un campo para actualizar");
-        }
-        if (request.getNombres() != null) {
-            if (request.getNombres().isBlank()) {
-                throw new BadRequestException("El nombre no puede estar vacío");
-            }
-            usuario.setNombres(request.getNombres().trim());
-        }
-        if (request.getApellidos() != null) {
-            if (request.getApellidos().isBlank()) {
-                throw new BadRequestException("Los apellidos no pueden estar vacíos");
-            }
-            usuario.setApellidos(request.getApellidos().trim());
         }
         if (request.getNroCelular() != null) {
             if (request.getNroCelular().isBlank()) {
                 throw new BadRequestException("El celular no puede estar vacío");
             }
             usuario.setNroCelular(request.getNroCelular().trim());
+        }
+        if (request.getDireccion() != null) {
+            usuario.setDireccionContacto(request.getDireccion().trim());
         }
         usuarioRepository.save(usuario);
         return aPerfil(veterinario);
@@ -106,7 +99,8 @@ public class VeterinarioServiceImpl implements VeterinarioService {
                 veterinario.getIdVeterinario(), usuario.getIdUsuario(),
                 usuario.getNombres(), usuario.getApellidos(), usuario.getCorreo(),
                 usuario.getNroCelular(), veterinario.getEspecialidad(),
-                veterinario.getNroColegiatura());
+                veterinario.getNroColegiatura(), veterinario.getTratamientoProfesional(),
+                usuario.getDireccionContacto());
     }
 
     @Override
@@ -128,6 +122,7 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     public VeterinarioResponse create(
             CreateVeterinarioRequest request) {
 
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
         UsuarioEntity usuario =
                 usuarioRepository.findById(
                                 request.getIdUsuario()
@@ -146,6 +141,7 @@ public class VeterinarioServiceImpl implements VeterinarioService {
                 veterinarioMapper.toEntity(request);
 
         entity.setUsuario(usuario);
+        entity.setTratamientoProfesional(normalizarTratamiento(request.getTratamientoProfesional()));
 
         VeterinarioEntity savedEntity =
                 veterinarioRepository.save(entity);
@@ -167,11 +163,14 @@ public class VeterinarioServiceImpl implements VeterinarioService {
                                 )
                         );
 
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
         if (!entity.getNroColegiatura().equals(request.getNroColegiatura())
                 && veterinarioRepository.existsByNroColegiatura(request.getNroColegiatura())) {
             throw new BadRequestException("El número de colegiatura ya está registrado");
         }
+        if (request.getDatosUsuario() != null) usuarios.actualizar(entity.getUsuario().getIdUsuario(), request.getDatosUsuario());
         veterinarioMapper.updateEntity(request, entity);
+        if (request.getTratamientoProfesional() != null) entity.setTratamientoProfesional(normalizarTratamiento(request.getTratamientoProfesional()));
 
         VeterinarioEntity updatedEntity =
                 veterinarioRepository.save(entity);
@@ -183,6 +182,8 @@ public class VeterinarioServiceImpl implements VeterinarioService {
     @Override
     @Transactional
     public VeterinarioResponse registrar(RegistrarVeterinarioRequest request) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
+        pe.edu.utec.vetcare.validation.PoliticaContrasena.validar(request.getContrasena());
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
             throw new BadRequestException("El correo ya se encuentra registrado");
         }
@@ -205,10 +206,13 @@ public class VeterinarioServiceImpl implements VeterinarioService {
 
         VeterinarioEntity veterinario = new VeterinarioEntity();
         veterinario.setUsuario(usuario);
+        veterinario.setTratamientoProfesional(normalizarTratamiento(request.getTratamientoProfesional()));
         veterinario.setEspecialidad(request.getEspecialidad());
         veterinario.setNroColegiatura(request.getNroColegiatura());
         return veterinarioMapper.toResponse(veterinarioRepository.save(veterinario));
     }
+
+    private String normalizarTratamiento(String value) { return value == null || value.isBlank() ? null : value; }
 
     private void validarUsuarioVeterinario(UsuarioEntity usuario) {
         if (usuario.getRol() == null || !"VETERINARIO".equals(usuario.getRol().getNombre())) {
@@ -240,6 +244,7 @@ public class VeterinarioServiceImpl implements VeterinarioService {
                                 )
                         );
 
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
         veterinarioRepository.delete(entity);
     }
 }

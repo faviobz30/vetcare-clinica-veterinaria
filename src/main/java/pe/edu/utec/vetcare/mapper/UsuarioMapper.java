@@ -14,6 +14,7 @@ public interface UsuarioMapper {
     @Mapping(target = "idUsuario", ignore = true)
     @Mapping(target = "rol", ignore = true)
     @Mapping(target = "fechaRegistro", ignore = true)
+    @Mapping(target = "fotoPerfil", ignore = true)
     UsuarioEntity toEntity(UsuarioRequest request);
 
     @Mapping(
@@ -24,12 +25,14 @@ public interface UsuarioMapper {
             source = "rol.nombre",
             target = "rol"
     )
+    @Mapping(target = "fotoPerfilUrl", ignore = true)
     UsuarioResponse toResponse(UsuarioEntity entity);
 
     @Mapping(target = "idUsuario", ignore = true)
     @Mapping(target = "rol", ignore = true)
     @Mapping(target = "fechaRegistro", ignore = true)
     @Mapping(target = "contrasena", ignore = true)
+    @Mapping(target = "fotoPerfil", ignore = true)
     void updateEntity(
             ActualizarUsuarioRequest request,
             @MappingTarget UsuarioEntity entity

@@ -8,5 +8,7 @@ public record PerfilVeterinarioResponse(
         String correo,
         String nroCelular,
         String especialidad,
-        String nroColegiatura) {
+        String nroColegiatura,
+        String tratamientoProfesional,
+        String direccion) {
 }

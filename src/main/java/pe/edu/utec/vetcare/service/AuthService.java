@@ -35,8 +35,11 @@ public class AuthService {
 
     @Transactional
     public RegistroPropietarioResponse registrarPropietario(RegistroPropietarioRequest request) {
+        pe.edu.utec.vetcare.validation.PoliticaContrasena.validar(request.contrasena());
         String correo = request.correo().trim().toLowerCase(Locale.ROOT);
         String documento = request.nroDocumento().trim();
+        if (request.tipoDocumento().equals("DNI") ? !documento.matches("[0-9]{8}") : !documento.matches("[A-Za-z0-9]{6,20}"))
+            throw new BadRequestException("Revisa el número de documento: DNI de 8 dígitos o documento de 6 a 20 letras y números");
 
         if (usuarios.existsByCorreo(correo)) {
             throw new BadRequestException("El correo ya se encuentra registrado");

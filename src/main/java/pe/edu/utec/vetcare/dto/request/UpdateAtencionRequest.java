@@ -12,7 +12,6 @@ import java.math.BigDecimal;
 @Data
 public class UpdateAtencionRequest {
 
-    @NotNull(message = "El precio de atención es obligatorio")
     @DecimalMin(
             value = "0.0",
             inclusive = false,

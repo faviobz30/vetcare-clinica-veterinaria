@@ -24,6 +24,9 @@ public class VeterinarioEntity {
     )
     private UsuarioEntity usuario;
 
+    @Column(name = "tratamiento_profesional", length = 4)
+    private String tratamientoProfesional;
+
     @Column(name = "especialidad")
     private String especialidad;
 

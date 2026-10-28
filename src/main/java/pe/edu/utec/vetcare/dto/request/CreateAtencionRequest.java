@@ -13,6 +13,9 @@ import java.math.BigDecimal;
 public class CreateAtencionRequest {
 
 
+    @Size(max = 20, message = "Registra como máximo 20 vacunas por atención")
+    private java.util.List<@NotNull @jakarta.validation.Valid VacunacionAtencionRequest> vacunas = java.util.List.of();
+
     @NotNull(message = "La historia clínica es obligatoria")
     private Long idHistoria;
 
@@ -22,7 +25,6 @@ public class CreateAtencionRequest {
     @NotNull(message = "La cita es obligatoria")
     private Long idCita;
 
-    @NotNull(message = "El precio de atención es obligatorio")
     @DecimalMin(value = "0.0", inclusive = false,
             message = "El precio debe ser mayor a 0")
     private BigDecimal precioAtencion;

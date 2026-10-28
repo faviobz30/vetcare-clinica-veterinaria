@@ -29,6 +29,7 @@ public interface AtencionMapper {
     @Mapping(target = "veterinarioAtencion", ignore = true)
     @Mapping(target = "cita", ignore = true)
     @Mapping(target = "fechaAtencion", ignore = true)
+    @Mapping(target = "precioAtencion", ignore = true)
     void updateEntity(
             UpdateAtencionRequest request,
             @MappingTarget AtencionEntity entity

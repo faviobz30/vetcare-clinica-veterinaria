@@ -11,6 +11,10 @@ import java.util.List;
 
 public interface CitaRepository extends JpaRepository<CitaEntity, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CitaEntity c where c.idCita=:id")
+    java.util.Optional<CitaEntity> findByIdForUpdate(@Param("id") Long id);
+
     boolean existsByMascota_IdMascota(Long idMascota);
 
     boolean existsByMascota_IdMascotaAndVeterinario_Usuario_Correo(Long idMascota, String correo);
@@ -30,6 +34,7 @@ public interface CitaRepository extends JpaRepository<CitaEntity, Long> {
         AND c.fechaCita < :finNuevaCita
         AND c.fechaCita > :inicioComparacion
         AND c.estado <> :estadoExcluido
+        AND c.estado <> pe.edu.utec.vetcare.enums.EstadoCita.NO_ASISTIO
     """)
     boolean existsCitaSuperpuesta(
             @Param("idVeterinario") Long idVeterinario,
@@ -37,6 +42,9 @@ public interface CitaRepository extends JpaRepository<CitaEntity, Long> {
             @Param("finNuevaCita") LocalDateTime finNuevaCita,
             @Param("estadoExcluido") EstadoCita estadoExcluido
     );
+
+    @Query("select c from CitaEntity c where c.veterinario.idVeterinario=:vet and c.fechaCita>:desde and c.fechaCita<:hasta and c.estado in (pe.edu.utec.vetcare.enums.EstadoCita.PENDIENTE, pe.edu.utec.vetcare.enums.EstadoCita.CONFIRMADA)")
+    List<CitaEntity> reservasDelDia(@Param("vet") Long vet,@Param("desde") LocalDateTime desde,@Param("hasta") LocalDateTime hasta);
 
     // Al reprogramar, no comparar la cita con ella misma.
     @Query("""
@@ -46,6 +54,7 @@ public interface CitaRepository extends JpaRepository<CitaEntity, Long> {
         AND c.fechaCita < :finNuevaCita
         AND c.fechaCita > :inicioComparacion
         AND c.estado <> :estadoExcluido
+        AND c.estado <> pe.edu.utec.vetcare.enums.EstadoCita.NO_ASISTIO
         AND c.idCita <> :idCitaActual
     """)
     boolean existsOtraCitaSuperpuesta(

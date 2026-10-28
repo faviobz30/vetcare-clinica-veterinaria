@@ -1,6 +1,5 @@
 package pe.edu.utec.vetcare.dto.request;
 
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -19,7 +18,6 @@ public class CreateCitaRequest {
     private Long idMascota;
 
     @NotNull(message = "La fecha de la cita es obligatoria")
-    @Future(message = "La fecha de la cita debe ser futura")
     private LocalDateTime fechaCita;
 
     @NotBlank(message = "El motivo de la cita es obligatorio")

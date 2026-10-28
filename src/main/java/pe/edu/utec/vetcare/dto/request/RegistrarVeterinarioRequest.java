@@ -7,6 +7,9 @@ import lombok.Data;
 
 @Data
 public class RegistrarVeterinarioRequest {
+    @jakarta.validation.constraints.Pattern(regexp="Dr[.]|Dra[.]|", message="Selecciona Dr., Dra. o Sin tratamiento")
+    private String tratamientoProfesional;
+
     @NotBlank @Size(max = 100)
     private String nombres;
     @NotBlank @Size(max = 100)
@@ -17,7 +20,7 @@ public class RegistrarVeterinarioRequest {
     private String nroDocumento;
     @NotBlank @Email @Size(max = 150)
     private String correo;
-    @NotBlank @Size(min = 12, max = 72)
+    @NotBlank @pe.edu.utec.vetcare.validation.ContrasenaSegura
     private String contrasena;
     @Size(max = 20)
     private String nroCelular;

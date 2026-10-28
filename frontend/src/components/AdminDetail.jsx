@@ -1,0 +1,2 @@
+import {useEffect,useRef} from 'react'
+export default function AdminDetail({title,children,onClose}){const ref=useRef(null);useEffect(()=>{ref.current.showModal()},[]);return <dialog ref={ref} className="profile-dialog" aria-label={title} onCancel={onClose}><div className="flex items-center justify-between mb-4"><h2 className="text-xl font-bold">{title}</h2><button className="btn btn-ghost" onClick={onClose}>Cerrar</button></div>{children}</dialog>}

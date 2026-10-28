@@ -20,10 +20,13 @@ public class UsuarioResponse {
     private String correo;
 
     private String nroCelular;
+    private String direccionContacto;
 
     private Long idRol;
 
     private String rol;
 
     private LocalDateTime fechaRegistro;
+
+    private String fotoPerfilUrl;
 }

@@ -40,13 +40,19 @@ public class AtencionServiceImpl
     private final HistoriaClinicaRepository historiaClinicaRepository;
 
     private final AtencionMapper atencionMapper;
+    private final pe.edu.utec.vetcare.service.VacunaService vacunas;
+    private final pe.edu.utec.vetcare.service.SeguimientoCitaService seguimiento;
+    private final pe.edu.utec.vetcare.service.ReglasHorarioAtencion horario;
 
     public AtencionServiceImpl(
             AtencionRepository atencionRepository,
             CitaRepository citaRepository,
             VeterinarioRepository veterinarioRepository,
             HistoriaClinicaRepository historiaClinicaRepository,
-            AtencionMapper atencionMapper
+            AtencionMapper atencionMapper,
+            pe.edu.utec.vetcare.service.SeguimientoCitaService seguimiento,
+            pe.edu.utec.vetcare.service.ReglasHorarioAtencion horario,
+            pe.edu.utec.vetcare.service.VacunaService vacunas
     ) {
 
         this.atencionRepository = atencionRepository;
@@ -55,6 +61,8 @@ public class AtencionServiceImpl
         this.historiaClinicaRepository =
                 historiaClinicaRepository;
         this.atencionMapper = atencionMapper;
+        this.vacunas = vacunas;
+        this.seguimiento = seguimiento; this.horario = horario;
     }
 
     @Override
@@ -89,7 +97,7 @@ public class AtencionServiceImpl
 
         CitaEntity cita =
                 citaRepository
-                        .findById(
+                        .findByIdForUpdate(
                                 request.getIdCita()
                         )
                         .orElseThrow(() ->
@@ -99,6 +107,8 @@ public class AtencionServiceImpl
                         );
 
         comprobarEscrituraCita(cita);
+        validarPrecio(request.getPrecioAtencion());
+        var permiso = seguimiento.autorizarRegistro(cita);
         if (cita.getEstado()
                 != EstadoCita.CONFIRMADA) {
 
@@ -178,7 +188,7 @@ public class AtencionServiceImpl
         entity.setCita(cita);
 
         entity.setFechaAtencion(
-                LocalDateTime.now()
+                horario.ahora()
         );
 
         entity.setPrecioAtencion(
@@ -208,9 +218,15 @@ public class AtencionServiceImpl
         AtencionEntity savedEntity =
                 atencionRepository.save(entity);
 
+        // Toda la atención y sus vacunas se confirman o se revierten juntas.
+        if (request.getVacunas() != null && !request.getVacunas().isEmpty()) {
+            vacunas.registrarDuranteAtencion(savedEntity, request.getVacunas());
+        }
+
         // Mismo @Transactional: si falla el registro, no se cambia la cita.
         cita.setEstado(EstadoCita.ATENDIDA);
         citaRepository.save(cita);
+        seguimiento.consumir(permiso);
 
         return atencionMapper.toResponse(
                 savedEntity
@@ -223,20 +239,17 @@ public class AtencionServiceImpl
             Long id,
             UpdateAtencionRequest request) {
 
-        AtencionEntity entity =
-                atencionRepository.findById(id)
-                        .orElseThrow(() ->
-                                new AtencionNoEncontradaException(
-                                        "Atención no encontrada"
-                                )
-                        );
+        AtencionEntity entity = buscarBloqueada(id);
 
-        comprobarEscrituraCita(entity.getCita());
+        if (!AccesoClinico.es("VETERINARIO") || !AccesoClinico.esVeterinario(entity.getCita()))
+            throw new AccessDeniedException("Solo el veterinario autor puede actualizar el contenido clínico");
+        validarPrecio(request.getPrecioAtencion());
         atencionMapper.updateEntity(
                 request,
                 entity
         );
 
+        if(request.getPrecioAtencion()!=null) entity.setPrecioAtencion(request.getPrecioAtencion());
         AtencionEntity updatedEntity =
                 atencionRepository.save(entity);
 
@@ -258,7 +271,7 @@ public class AtencionServiceImpl
                         );
 
         AccesoClinico.soloAdmin();
-        atencionRepository.delete(entity);
+        throw new EstadoCitaInvalidoException("Las atenciones clínicas se conservan; no se permite su eliminación ordinaria");
     }
     private boolean puedeLeer(AtencionEntity entity) {
         return AccesoClinico.es("ADMIN") || (AccesoClinico.es("VETERINARIO") && AccesoClinico.esVeterinario(entity.getCita()))
@@ -272,5 +285,19 @@ public class AtencionServiceImpl
     private void comprobarEscrituraCita(CitaEntity cita) {
         if (AccesoClinico.es("ADMIN") || (AccesoClinico.es("VETERINARIO") && AccesoClinico.esVeterinario(cita))) return;
         throw new AccessDeniedException("Solo el veterinario asignado o ADMIN puede registrar o modificar la atención");
+    }
+    private void validarPrecio(java.math.BigDecimal precio){
+        if(precio!=null && !AccesoClinico.es("ADMIN")) throw new AccessDeniedException("El precio solo puede ser establecido por ADMIN");
+    }
+    @Transactional
+    public AtencionResponse actualizarPrecio(Long id, java.math.BigDecimal precio){
+        AccesoClinico.soloAdmin();
+        var entity=buscarBloqueada(id);
+        entity.setPrecioAtencion(precio);return atencionMapper.toResponse(atencionRepository.save(entity));
+    }
+    private AtencionEntity buscarBloqueada(Long id){
+        Long citaId=atencionRepository.citaId(id).orElseThrow(()->new AtencionNoEncontradaException("Atención no encontrada"));
+        seguimiento.bloquear(citaId);
+        return atencionRepository.findById(id).orElseThrow(()->new AtencionNoEncontradaException("Atención no encontrada"));
     }
 }

@@ -42,4 +42,12 @@ public class CitaEntity {
 
     @Column(name = "motivo_cita")
     private String motivoCita;
+
+    @Column(name="inicio_registro") private LocalDateTime inicioRegistro;
+    @Column(name="id_usuario_inicio") private Long idUsuarioInicio;
+    @Column(name="motivo_cancelacion",length=80) private String motivoCancelacion;
+    @Column(name="detalle_cancelacion",length=500) private String detalleCancelacion;
+    @Column(name="id_usuario_cancelacion") private Long idUsuarioCancelacion;
+    @Column(name="rol_cancelacion",length=20) private String rolCancelacion;
+    @Column(name="fecha_cancelacion") private LocalDateTime fechaCancelacion;
 }

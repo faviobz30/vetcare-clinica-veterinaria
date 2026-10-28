@@ -48,18 +48,18 @@ public class AtencionEntity {
     private BigDecimal peso;
 
 
-    @Column(name = "sintoma")
+    @Column(name = "sintoma", length = 500)
     private String sintoma;
 
 
-    @Column(name = "diagnostico")
+    @Column(name = "diagnostico", length = 500)
     private String diagnostico;
 
 
-    @Column(name = "tratamiento")
+    @Column(name = "tratamiento", length = 500)
     private String tratamiento;
 
 
-    @Column(name = "observacion")
+    @Column(name = "observacion", length = 500)
     private String observacion;
 }

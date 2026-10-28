@@ -7,6 +7,9 @@ import lombok.Data;
 
 @Data
 public class CreateVeterinarioRequest {
+    @jakarta.validation.constraints.Pattern(regexp="Dr[.]|Dra[.]|", message="Selecciona Dr., Dra. o Sin tratamiento")
+    private String tratamientoProfesional;
+
 
 
     @NotNull(message = "El usuario es obligatorio")
