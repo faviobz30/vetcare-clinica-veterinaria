@@ -58,6 +58,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
 
+    env:
+      POSTGRES_PASSWORD: clave-ficticia-solo-ci
+      DB_PASSWORD: clave-ficticia-solo-ci
+      JWT_SECRET: valor-ficticio-solo-para-validar-compose
+      MAIL_PASSWORD: valor-ficticio-solo-ci
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v4
