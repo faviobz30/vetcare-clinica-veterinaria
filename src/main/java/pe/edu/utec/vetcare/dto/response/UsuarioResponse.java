@@ -29,4 +29,5 @@ public class UsuarioResponse {
     private LocalDateTime fechaRegistro;
 
     private String fotoPerfilUrl;
+    private boolean fotoDisponible;
 }

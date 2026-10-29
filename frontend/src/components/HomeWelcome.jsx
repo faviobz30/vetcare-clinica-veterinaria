@@ -8,7 +8,7 @@ const photos=import.meta.glob('../assets/inicio-veterinario-*.png',{eager:true,q
 export default function HomeWelcome({profile,vet,owner=false,admin=false,error=''}) {
   const welcome=vetWelcome(profile,vet)
   const photo=owner?pets:photos[`../assets/inicio-veterinario-${welcome.variant}.png`]||pets
-  const greeting=admin?`¡Hola${profile?.nombres?.trim()?`, ${profile.nombres.trim()}`:''}!`:owner?`¡Bienvenida${profile?.nombres?.trim()?`, ${profile.nombres.trim()}`:''}!`:welcome.greeting
+  const greeting=admin?`¡Hola${profile?.nombres?.trim()?`, ${[profile.nombres,profile.apellidos].filter(Boolean).join(' ').trim()}`:''}!`:owner?`¡Bienvenida${profile?.nombres?.trim()?`, ${profile.nombres.trim()}`:''}!`:welcome.greeting
   return <header className={`vetcare-hero home-welcome ${owner?'home-welcome-owner':'home-welcome-vet'}`}>
     <svg className="vetcare-hero-shapes" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><path d="M520 300Q635 142 805 165T1010 0H1200V300Z" fill="#c4a4fa" opacity=".18"/><path d="M660 300Q785 86 940 110T1170 0H1200V300Z" fill="#bd93fb" opacity=".18"/><path d="M880 300Q988 203 1110 245T1200 186V300Z" fill="#a77cf4" opacity=".19"/></svg>
     <div className="home-welcome-copy"><p className="home-welcome-eyebrow">{admin?'VETCARE · ADMINISTRACIÓN':owner?'VETCARE':'VETCARE · ESPACIO VETERINARIO'}</p><h1>{greeting}</h1><p className="home-welcome-description">{admin?'Gestiona y supervisa tu clínica veterinaria desde un solo lugar.':owner?'Gracias por ser parte de su cuidado.':'Gracias por cuidar la salud de sus pacientes.'}</p>{error&&<p className="home-welcome-error" role="alert">{error}</p>}</div>

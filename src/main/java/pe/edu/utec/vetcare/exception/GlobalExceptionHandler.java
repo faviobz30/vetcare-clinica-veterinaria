@@ -13,6 +13,11 @@ import java.util.LinkedHashMap;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(CambioContrasenaInvalidoException.class)
+    public ResponseEntity<?> cambioContrasena(CambioContrasenaInvalidoException ex) {
+        return ResponseEntity.badRequest().body(Map.of("error",ex.getMessage(),"campos",ex.getCampos()));
+    }
+
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<?> integridad(org.springframework.dao.DataIntegrityViolationException ex) {
         return ResponseEntity.status(409).body(java.util.Map.of("error", "No se pudo guardar o eliminar: el registro está relacionado con otros datos o contiene un valor duplicado."));

@@ -31,6 +31,7 @@ public class AuthService {
     private final JwtEncoder jwtEncoder;
     private final PropietarioRepository propietarios;
     private final RolRepository roles;
+    private final pe.edu.utec.vetcare.security.CredencialJwt credencial;
     private static final long TOKEN_SEGUNDOS = 3600;
 
     @Transactional
@@ -88,6 +89,7 @@ public class AuthService {
                 .expiresAt(ahora.plusSeconds(TOKEN_SEGUNDOS))
                 .claim("idUsuario", usuario.getIdUsuario())
                 .claim("rol", rol)
+                .claim("credencial", credencial.huella(usuario))
                 .build();
         var header = JwsHeader.with(MacAlgorithm.HS256).build();
         String token = jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();

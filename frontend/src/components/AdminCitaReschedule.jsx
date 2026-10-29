@@ -1,0 +1,14 @@
+import {useRef,useState} from 'react'
+import VetcareModal from './VetcareModal'
+import AppointmentAvailabilityPicker from './AppointmentAvailabilityPicker'
+import PetAvatar from './PetAvatar'
+import {api} from '../lib/api'
+import {availableSelection,SLOT_CONFLICT} from '../lib/appointmentAvailability'
+import {appointmentError,validateAppointment} from '../lib/appointments'
+import {attentionDate} from '../lib/attentions'
+import {professionalName} from '../lib/clinicalAppointments'
+export default function AdminCitaReschedule({item,pet,vet,onClose,onDone}){
+ const [fechaCita,setDate]=useState(''),[availability,setAvailability]=useState(null),[revision,setRevision]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(''),sending=useRef(false)
+ async function save(e){e.preventDefault();if(sending.current)return;const body={fechaCita,motivoCita:item.motivoCita};const problem=validateAppointment(body);if(problem||!availableSelection(availability,item.idVeterinario,fechaCita)){setError(problem||'Selecciona un horario disponible actualizado.');return}sending.current=true;setBusy(true);setError('');try{await api.put(`/citas/${item.idCita}`,body);onDone()}catch(e){if(e?.response?.status===409){setAvailability(null);setRevision(v=>v+1);setDate('');setError(SLOT_CONFLICT)}else setError(appointmentError(e))}finally{sending.current=false;setBusy(false)}}
+ return <VetcareModal className="admin-cita-dialog" label="Reprogramar cita" busy={busy} onClose={()=>{if(!sending.current)onClose()}}><h2>Reprogramar cita</h2><p className="cita-dialog-subtitle">Selecciona la nueva fecha y un horario disponible.</p><div className="admin-cita-patient"><PetAvatar pet={pet} size={48}/><div><strong>{pet?.nombre||'Mascota no disponible'}</strong><span>{pet?.nombrePropietario||'Propietario no disponible'}</span></div></div><dl className="admin-cita-program"><div><dt>Veterinario asignado</dt><dd>{professionalName(vet)||'No disponible'}</dd></div><div><dt>Fecha y hora actuales · Lima</dt><dd>{attentionDate(item.fechaCita)} · {attentionDate(item.fechaCita,'time')}</dd></div></dl><form onSubmit={save}><label className="admin-cita-field">Nueva fecha y hora · Lima</label><AppointmentAvailabilityPicker value={fechaCita} onChange={setDate} vet={item.idVeterinario} exclude={item.idCita} revision={revision} busy={busy} onLoaded={setAvailability}/><p className="cita-dialog-subtitle">Se conservan la mascota, el veterinario y el motivo de consulta. Consulta de 30 minutos.</p>{error&&<p role="alert" className="admin-cita-error">{error}</p>}<footer><button type="button" className="btn btn-ghost" disabled={busy} onClick={onClose}>Cancelar</button><button className="btn btn-primary" disabled={busy||!availableSelection(availability,item.idVeterinario,fechaCita)}>{busy?'Guardando…':'Reprogramar cita'}</button></footer></form></VetcareModal>
+}

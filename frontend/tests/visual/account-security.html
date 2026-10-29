@@ -1,0 +1,42 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Seguridad</title><style>.capture .qa-tools{display:none}</style><div id="root"></div><script type="module">
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter,Routes,Route} from 'react-router-dom'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import Perfil from '/src/pages/Perfil.jsx'
+import Login from '/src/pages/Login.jsx'
+import {api} from '/src/lib/api.js'
+import '/src/index.css'
+const h=React.createElement,q=new URLSearchParams(location.search),role=q.get('role')||'ADMIN';if(q.has('captura'))document.documentElement.classList.add('capture')
+const token=['qa',btoa(JSON.stringify({idUsuario:901,rol:role,exp:4102444800})),'qa'].join('.');sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role',role)
+const profile={idUsuario:901,nombres:'Elena',apellidos:'Herrera',correo:'seguridad@example.invalid',tipoDocumento:'DNI',nroDocumento:'12345678',nroCelular:'999111222',direccionContacto:'Lima',rol:role}
+let writes=0,fail=false,ownerAddress='Lima',profileReads=0
+const reject=(status,data,config)=>{throw {response:{status,data},config}}
+api.defaults.adapter=async config=>{await new Promise(r=>setTimeout(r,100));let data;const url=config.url
+ if(config.method==='get'){
+  if(url==='/usuarios/me'){profileReads++;data={...profile}}
+  else if(url==='/propietarios/me')data={idPropietario:900,direccion:ownerAddress,estadoCliente:'ACTIVO'}
+  else if(url==='/veterinarios/me')data={idVeterinario:900,direccion:'Lima',especialidad:'General',nroColegiatura:'QA-1'}
+  else reject(404,{error:'Sin foto'},config)
+ }else if(url==='/usuarios/me/contrasena'){
+  writes++;if(fail){fail=false;reject(400,{error:'Revisa los datos',campos:{contrasenaActual:'La contraseña actual es incorrecta.'}},config)}
+  data={mensaje:'Contraseña actualizada.'}
+ }else reject(403,{error:'Sin API real'},config)
+ return {data,status:200,statusText:'OK',headers:{},config}
+}
+const wait=async pred=>{for(let i=0;i<250;i++){if(pred())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')},tick=()=>new Promise(r=>setTimeout(r,0)),btn=(text,scope=document)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text)
+function fill(key,value){const input=document.querySelector(`[name="${key}"]`);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}))}
+async function run(){const passed=[];const check=(ok,label)=>{if(!ok)throw Error(label);passed.push(label)};try{
+ await wait(()=>btn('Cambiar contraseña'));if(q.has('contact-sync')&&role==='PROPIETARIO'){
+  const contact=label=>[...document.querySelectorAll('.profile-field')].find(l=>l.querySelector(':scope>span')?.textContent===label)?.querySelector('input')
+  profile.nroCelular='987654321';ownerAddress='Dirección actualizada por administración';window.dispatchEvent(new Event('focus'));await wait(()=>contact('Celular')?.value==='987654321'&&contact('Dirección')?.value===ownerAddress);check(writes===0,'Contacto externo se actualiza al volver sin escribir')
+  btn('Editar información').click();await tick();const n=contact('Celular');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(n,'912345678');n.dispatchEvent(new Event('input',{bubbles:true}));await tick();const before=profileReads;profile.nroCelular='955555555';window.dispatchEvent(new Event('focus'));await new Promise(r=>setTimeout(r,300));check(contact('Celular').value==='912345678'&&profileReads===before,'Refresco no sobrescribe un contacto en edición');btn('Cancelar').click();await tick();window.dispatchEvent(new Event('focus'));await wait(()=>contact('Celular')?.value==='955555555');check(writes===0,'Cancelar y volver recupera contacto persistido sin POST')
+ }check(document.querySelector('.account-security h2').textContent==='Seguridad de la cuenta','Sección reutilizada '+role);btn('Cambiar contraseña').click();await wait(()=>document.querySelector('[role=dialog]'));const panel=document.querySelector('[role=dialog]').getBoundingClientRect();check(Math.abs(panel.x+panel.width/2-innerWidth/2)<3&&Math.abs(panel.y+panel.height/2-innerHeight/2)<3,'Modal centrado en viewport');check(!document.querySelector('dialog'),'Modal propio sin diálogo nativo');check(!document.querySelector('[role=dialog]').textContent.includes('72 bytes'),'Ayuda sin texto técnico');check(document.querySelectorAll('[role=dialog] input[type=password]').length===3,'Tres contraseñas ocultas')
+ document.querySelector('[aria-label="Mostrar contraseña actual"]').click();await tick();check(document.querySelector('[name=contrasenaActual]').type==='text','Mostrar contraseña');document.querySelector('[aria-label="Ocultar contraseña actual"]').click();await tick();check(document.querySelector('[name=contrasenaActual]').type==='password','Ocultar contraseña')
+ btn('Guardar nueva contraseña').click();await tick();check(document.querySelectorAll('[role=dialog] [role=alert]').length>=2&&writes===0,'Validación local sin POST')
+ fill('contrasenaActual','Anterior!1234');fill('nuevaContrasena','Nueva!56789');fill('confirmarContrasena','Distinta!5');await tick();btn('Guardar nueva contraseña').click();await tick();check(!!document.getElementById('error-confirmarContrasena')&&writes===0,'Confirmación no coincidente');btn('Cancelar',document.querySelector('[role=dialog]')).click();await tick();check(!document.querySelector('[role=dialog]')&&writes===0,'Cancelar sin escritura')
+ btn('Cambiar contraseña').click();await wait(()=>document.querySelector('[role=dialog]'));check(document.querySelector('[name=contrasenaActual]').value==='','Cancelar limpia contraseñas');for(const [key,value]of Object.entries({contrasenaActual:'Incorrecta!123',nuevaContrasena:'Nueva!56789',confirmarContrasena:'Nueva!56789'}))fill(key,value);await tick();fail=true;btn('Guardar nueva contraseña').click();await wait(()=>document.getElementById('error-contrasenaActual'));check(writes===1,'Error backend por campo');fill('contrasenaActual','Anterior!1234');await tick();check(!document.getElementById('error-contrasenaActual'),'Corregir limpia error');btn('Guardar nueva contraseña').click();btn('Guardar nueva contraseña').click();await tick();check(btn('Guardando…')?.disabled&&btn('Cancelar',document.querySelector('[role=dialog]'))?.disabled,'Acciones bloqueadas al enviar');await wait(()=>document.querySelector('.auth-message'));check(writes===2,'Doble clic no duplica envío');check(!sessionStorage.getItem('vetcare_token'),'Cierre de sesión local');check(document.querySelector('.auth-message').textContent.includes('Contraseña actualizada'),'Confirmación en login');check(!document.querySelector('[role=dialog]'),'Formulario eliminado tras éxito');check(document.documentElement.scrollWidth<=innerWidth,'Sin desbordamiento');document.getElementById('result').textContent=passed.length+' verificaciones correctas · '+passed.join(' · ')
+ }catch(err){document.getElementById('result').textContent='FALLO: '+err.message+' · '+passed.join(' · ')}}
+createRoot(document.getElementById('root')).render(h(AuthProvider,null,h(MemoryRouter,{initialEntries:['/panel/perfil']},h('div',null,h('div',{className:'qa-tools'},h('p',null,'QA AISLADA · Sin API real ni PostgreSQL · '+role),h('button',{onClick:run},'Comprobar seguridad'),h('output',{id:'result'})),h('main',{style:{padding:24,maxWidth:1200,margin:'auto'}},h(Routes,null,h(Route,{path:'/panel/perfil',element:h(Perfil)}),h(Route,{path:'/login',element:h(Login)})))))))
+if(q.has('auto'))run()
+</script></html>

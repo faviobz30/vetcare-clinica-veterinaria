@@ -1,11 +1,12 @@
 import GlobalSearch from './GlobalSearch'
 import { CalendarDays, ClipboardPlus, HeartPulse, LayoutDashboard, LogOut, Menu, PawPrint, ShieldCheck, Stethoscope, UsersRound, X, BookHeart, Bell, Syringe, ChevronDown, Camera, UserRound } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { prepareProfilePhoto } from '../lib/photo'
 import { errorText } from '../lib/api'
 import RecordatoriosBell from './RecordatoriosBell'
+import ProfilePhotoDialog from './ProfilePhotoDialog'
 
 const items = [
   {to:'/panel',label:'Inicio',icon:LayoutDashboard},
@@ -40,6 +41,10 @@ export default function Shell() {
   const [profileOpen,setProfileOpen] = useState(false)
   const [busy,setBusy] = useState(false)
   const [message,setMessage] = useState('')
+  const [preview,setPreview] = useState(null)
+  const [photoError,setPhotoError] = useState('')
+  const photoLock=useRef(false)
+  useEffect(()=>()=>{if(preview?.url)URL.revokeObjectURL(preview.url)},[preview])
   const fileInput = useRef(null)
   const {user,profile,photoUrl,logout,uploadPhoto} = useAuth()
   const role = user?.role
@@ -47,14 +52,24 @@ export default function Shell() {
   async function onPhotoSelected(event) {
     const file=event.target.files?.[0]
     event.target.value=''
-    if (!file) return
+    if (!file || photoLock.current) return
+    photoLock.current=true
     setMessage(''); setBusy(true)
     try {
+      if(role==='ADMIN'&&!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type))throw Error('Selecciona una fotografía JPG, PNG, WebP o AVIF.')
       const ready = await prepareProfilePhoto(file)
+      if(role==='ADMIN'){setPhotoError('');setProfileOpen(false);setPreview({file:ready,url:URL.createObjectURL(ready)});return}
       await uploadPhoto(ready)
       setMessage('Fotografía guardada correctamente.')
     } catch(err) { setMessage(err.response ? errorText(err) : err.message || 'No se pudo subir la fotografía.') }
-    finally { setBusy(false) }
+    finally { photoLock.current=false;setBusy(false) }
+  }
+  async function confirmAdminPhoto(){
+    if(photoLock.current)return
+    photoLock.current=true;setBusy(true);setPhotoError('')
+    try{await uploadPhoto(preview.file,{verify:true});setPreview(null);setMessage('Fotografía guardada y comprobada.');setProfileOpen(true)}
+    catch(err){setPhotoError(err.message?.startsWith('La fotografía')?err.message:errorText(err))}
+    finally{photoLock.current=false;setBusy(false)}
   }
   return <div className="min-h-screen lg:flex bg-vetcare-bg">
     <aside className="hidden lg:block lg:w-64 shrink-0"><div className="fixed h-screen w-64"><Sidebar/></div></aside>
@@ -64,10 +79,11 @@ export default function Shell() {
         <div className="flex items-center gap-3"><button className="lg:hidden" onClick={()=>setOpen(!open)} aria-label="Abrir menú">{open?<X/>:<Menu/>}</button><GlobalSearch/><span className="sm:hidden font-extrabold text-vetcare-primary flex gap-2 items-center"><HeartPulse size={21}/> VetCare</span></div>
         <div className="flex gap-3 items-center">{role==='PROPIETARIO' ? <RecordatoriosBell/> : role==='VETERINARIO' ? null : <span title="Recordatorios de vacunación disponibles para propietarios" className="border border-[#eee6f5] rounded-xl p-2.5 text-[#5c28a2] opacity-60"><Bell size={20}/></span>}<div className="relative">
           <button onClick={()=>setProfileOpen(v=>!v)} aria-expanded={profileOpen} aria-label="Opciones de perfil" className="flex items-center gap-2 text-left"><Avatar name={name} photoUrl={photoUrl}/><span className="hidden md:block"><strong className="block text-sm text-[#35106b] max-w-52 truncate">{name}</strong><span className="text-xs text-[#79619d]">{role==='VETERINARIO'?'Médico veterinario':role==='PROPIETARIO'?'Propietario':'Administrador'}</span></span><ChevronDown size={16} className="text-[#5c28a2]"/></button>
-          {profileOpen&&<div className="absolute right-0 top-12 z-30 bg-white border border-violet-100 shadow-xl rounded-xl w-64 p-3 space-y-2"><p className="text-sm font-semibold text-[#35106b] break-words">{name}</p><p className="text-xs text-[#79619d] break-all">{profile?.correo||''}</p><button type="button" disabled={busy} className="w-full flex items-center gap-2 text-left text-sm hover:bg-violet-50 rounded-lg p-2" onClick={()=>fileInput.current?.click()}><Camera size={17}/>{busy?'Subiendo fotografía...':'Cambiar fotografía'}</button><input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" className="hidden" onChange={onPhotoSelected}/>{message&&<p role="status" className="text-xs text-[#604183]">{message}</p>}<NavLink to="/panel/perfil" className="w-full block text-left text-sm hover:bg-violet-50 rounded-lg p-2" onClick={()=>setProfileOpen(false)}>Ver mi perfil</NavLink><button className="w-full text-left text-sm hover:bg-violet-50 rounded-lg p-2" onClick={()=>{setProfileOpen(false);logout()}}>Cerrar sesión</button></div>}
+          {profileOpen&&<div className="absolute right-0 top-12 z-30 bg-white border border-violet-100 shadow-xl rounded-xl w-64 p-3 space-y-2"><p className="text-sm font-semibold text-[#35106b] break-words">{name}</p><p className="text-xs text-[#79619d] break-all">{profile?.correo||''}</p><button type="button" disabled={busy} className="w-full flex items-center gap-2 text-left text-sm hover:bg-violet-50 rounded-lg p-2" onClick={()=>fileInput.current?.click()}><Camera size={17}/>{busy?'Subiendo fotografía...':'Cambiar fotografía'}</button><input ref={fileInput} type="file" accept={role==='ADMIN'?'image/jpeg,image/png,image/webp,image/avif':'image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif'} className="hidden" onChange={onPhotoSelected}/>{message&&<p role="status" className="text-xs text-[#604183]">{message}</p>}<NavLink to="/panel/perfil" className="w-full block text-left text-sm hover:bg-violet-50 rounded-lg p-2" onClick={()=>setProfileOpen(false)}>Ver mi perfil</NavLink><button className="w-full text-left text-sm hover:bg-violet-50 rounded-lg p-2" onClick={()=>{setProfileOpen(false);logout()}}>Cerrar sesión</button></div>}
         </div></div>
       </header>
       <div className="max-w-[1500px] mx-auto p-4 md:p-6 lg:p-7"><Outlet/></div>
     </div>
+    {role==='ADMIN'&&preview&&<ProfilePhotoDialog busy={busy} onClose={()=>{setPreview(null);setPhotoError('')}}><h2>Vista previa de tu fotografía</h2><img className="profile-preview" src={preview.url} alt="Vista previa de la nueva fotografía"/>{photoError&&<p role="alert" className="profile-error">{photoError}</p>}<div className="profile-dialog-actions"><button type="button" disabled={busy} onClick={()=>{setPreview(null);setPhotoError('')}}>Cancelar</button><button type="button" className="profile-primary" disabled={busy} onClick={confirmAdminPhoto}>{busy?'Comprobando…':'Guardar foto'}</button></div></ProfilePhotoDialog>}
   </div>
 }

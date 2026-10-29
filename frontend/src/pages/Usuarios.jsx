@@ -1,60 +1,56 @@
-import {adminMatches} from '../lib/admin'
+import {useProfilePhotoRefresh} from '../lib/profilePhoto'
+import {useNavigate} from 'react-router-dom'
+import {useCallback,useEffect,useRef,useState} from 'react'
+import {Eye,Pencil,Plus,RefreshCw,Search,Trash2,ChevronLeft,ChevronRight,AlertCircle,Info} from 'lucide-react'
+import {api} from '../lib/api'
+import {useAuth} from '../contexts/AuthContext'
 import {useCitaToast} from '../lib/useCitaToast'
+import {fullName,dateDisplay} from '../lib/display'
+import {filterUsers,pageUsers,userError,readUserRoles,userRolesError,userFormErrors,userServerErrors} from '../lib/users'
 import CitaToast from '../components/CitaToast'
 import PrettySelect from '../components/PrettySelect'
-import './UnifiedHeadings.css'
-import './Admin.css'
-import { useEffect, useState } from 'react'
-import { AlertCircle, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react'
-import { api, errorText } from '../lib/api'
 import EditorForm from '../components/EditorForm'
-import { listOf } from '../lib/display'
-
-const roles = [
-  {value:1,label:'ADMIN'},
-  {value:2,label:'PROPIETARIO'},
-  {value:3,label:'VETERINARIO'},
-]
-
-export default function Usuarios() {
-  const [query,setQuery]=useState(''),[role,setRole]=useState(''),[message,setMessage]=useCitaToast()
-  const [items,setItems] = useState([])
-  const [error,setError] = useState('')
-  const [form,setForm] = useState(null)
-  function load(){return api.get('/usuarios').then(({data})=>{setError('');setItems(listOf(data))}).catch(e=>setError(errorText(e)))}
-  useEffect(()=>{load()},[])
-  const createFields = [
-    {key:'nombres',label:'Nombres',maxLength:100},{key:'apellidos',label:'Apellidos',maxLength:100},
-    {key:'tipoDocumento',label:'Tipo documento',options:[{value:'DNI',label:'DNI'},{value:'CE',label:'CE'},{value:'PASAPORTE',label:'Pasaporte'},...(form?.item?.tipoDocumento&&!['DNI','CE','PASAPORTE'].includes(form.item.tipoDocumento)?[{value:form.item.tipoDocumento,label:form.item.tipoDocumento}]:[])]},
-    {key:'nroDocumento',label:'N° documento',maxLength:20},{key:'correo',label:'Correo',type:'email',wide:true},
-    {key:'contrasena',label:'Contraseña',type:'password',wide:true},{key:'nroCelular',label:'Celular',required:false,maxLength:20},
-    {key:'idRol',label:'Rol',options:roles},
-  ]
-  const editFields = createFields.filter(f=>f.key!=='contrasena' && f.key!=='idRol')
-  async function remove(item) {
-    if (!window.confirm(`¿Eliminar al usuario ${item.correo}?`)) return
-    try { await api.delete(`/usuarios/${item.idUsuario}`); setMessage('Usuario eliminado.'); await load() }
-    catch (e) { setError(errorText(e)) }
-  }
-  const visible=items.filter(u=>adminMatches(query,u.nombres,u.apellidos,u.correo,u.nroDocumento)&&(!role||String(u.idRol)===role))
-  return <section>
-    <div className="vetcare-section-header">
-      <div><h1 className="text-3xl font-black">Usuarios</h1><p className="text-vetcare-text-muted mt-1">Consulta y administración de cuentas registradas.</p></div>
-      <div className="flex gap-2"><button className="btn btn-ghost" onClick={load}><RefreshCw size={17}/> Actualizar</button><button className="btn btn-primary" onClick={()=>setForm({type:'create'})}><Plus size={17}/> Nuevo usuario</button></div>
-    </div>
-    <CitaToast message={message} onClose={()=>setMessage('')}/><div className="admin-filters"><input className="input" aria-label="Buscar usuarios" placeholder="Buscar nombre, correo o documento" value={query} onChange={e=>setQuery(e.target.value)}/><PrettySelect label="Filtrar rol" value={role} onChange={setRole} placeholder="Todos los roles" options={roles}/></div>
-    {error && <div role="alert" className="p-3 rounded-xl bg-red-50 text-red-800 mb-4 flex gap-2"><AlertCircle size={18}/>{error}</div>}
-    <div className="overflow-x-auto bg-white border border-vetcare-soft rounded-2xl"><table className="w-full text-sm">
-      <thead className="bg-[#f2eefc]"><tr>{['ID','Nombre','Correo','Documento','Rol','Acciones'].map(h=><th key={h} className="px-4 py-4 text-left">{h}</th>)}</tr></thead>
-      <tbody>{visible.map(u=><tr key={u.idUsuario} className="border-t border-vetcare-soft-2">
-        <td className="p-4">#{u.idUsuario}</td>
-        <td className="p-4 font-semibold">{u.nombres} {u.apellidos}</td>
-        <td className="p-4">{u.correo}</td>
-        <td className="p-4">{u.tipoDocumento} {u.nroDocumento}</td>
-        <td className="p-4">{u.rol || u.idRol}</td>
-        <td className="p-4"><div className="flex gap-2"><button className="btn btn-ghost text-xs" onClick={()=>setForm({type:'edit',item:u})}><Pencil size={14}/> Editar</button><button className="btn btn-ghost text-xs" onClick={()=>remove(u)}><Trash2 size={14}/> Eliminar</button></div></td>
-      </tr>)}{!visible.length && <tr><td colSpan={6} className="text-center p-10 text-vetcare-text-muted">Sin usuarios</td></tr>}</tbody>
-    </table></div>
-    {form && <EditorForm title={form.type==='create'?'Crear usuario':'Editar usuario'} endpoint={form.type==='create'?'/usuarios':`/usuarios/${form.item.idUsuario}`} method={form.type==='create'?'post':'put'} fields={form.type==='create'?createFields:editFields} initial={form.item||{tipoDocumento:'DNI',idRol:2}} onClose={()=>setForm(null)} onDone={()=>{setForm(null);setMessage('Usuario guardado correctamente.');load()}}/>}
-  </section>
+import VetcareModal from '../components/VetcareModal'
+import UserAvatar from '../components/UserAvatar'
+import useUserPhotos from '../lib/useUserPhotos'
+import './UnifiedHeadings.css'
+import './Veterinarios.css'
+import './Usuarios.css'
+const docs=[{value:'DNI',label:'DNI'},{value:'CE',label:'CE'},{value:'PASAPORTE',label:'Pasaporte'}]
+const knownRoles=['ADMIN','VETERINARIO','PROPIETARIO']
+function Badge({role}){return <span className={`users-badge users-role-${role?.toLowerCase()}`}>{role||'No disponible'}</span>}
+export default function Usuarios(){
+ const {user,refreshProfile,logout}=useAuth(),navigate=useNavigate(),cache=useUserPhotos(),[items,setItems]=useState([]),[roles,setRoles]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[rolesError,setRolesError]=useState(''),[rolesLoading,setRolesLoading]=useState(true)
+ const [query,setQuery]=useState(''),[role,setRole]=useState(''),[page,setPage]=useState(1),[form,setForm]=useState(null),[message,setMessage]=useCitaToast()
+ const [pending,setPending]=useState(false),[modalError,setModalError]=useState(''),[confirm,setConfirm]=useState(null),version=useRef(0),locked=useRef(false),resolver=useRef(null),confirmed=useRef(false)
+ const clearPhotos=cache.clear
+ const roleVersion=useRef(0)
+ const loadRoles=useCallback(async()=>{const v=++roleVersion.current;setRolesLoading(true);setRolesError('');try{const {data}=await api.get('/usuarios/roles');if(v===roleVersion.current)setRoles(readUserRoles(data))}catch(e){if(v===roleVersion.current){setRoles([]);setRolesError(userRolesError(e))}}finally{if(v===roleVersion.current)setRolesLoading(false)}},[])
+ const loadUsers=useCallback(async()=>{const v=++version.current;setLoading(true);setError('');try{const {data}=await api.get('/usuarios');if(!Array.isArray(data))throw Error('Formato inesperado');if(v===version.current){setItems(data);clearPhotos()}}catch(e){if(v===version.current)setError(userError(e))}finally{if(v===version.current)setLoading(false)}},[clearPhotos])
+ const load=useCallback(()=>Promise.all([loadUsers(),loadRoles()]),[loadUsers,loadRoles])
+ const invalidate=useCallback(()=>{version.current++;roleVersion.current++},[])
+ useEffect(()=>{let active=true;Promise.resolve().then(()=>{if(active)load()});return()=>{active=false;invalidate();resolver.current?.(false)}},[load,invalidate])
+ useProfilePhotoRefresh(loadUsers)
+ const visible=filterUsers(items,query,role),pagination=pageUsers(visible,page)
+ async function open(type,item){if(locked.current)return;setModalError('');setForm({type,item,loading:true});locked.current=true;try{const {data}=await api.get(`/usuarios/${item.idUsuario}`);setForm({type,item:data,loading:false})}catch(e){setModalError(userError(e));setForm({type,item,loading:false,failed:true})}finally{locked.current=false}}
+ function close(){if(pending||locked.current)return;setForm(null);setModalError('')}
+ async function remove(){if(locked.current)return;locked.current=true;setPending(true);setModalError('');try{await api.delete(`/usuarios/${form.item.idUsuario}`);setForm(null);setMessage('Cuenta eliminada correctamente.');await load()}catch(e){setModalError(userError(e))}finally{locked.current=false;setPending(false)}}
+ function confirmAdmin(payload){const selected=roles.find(r=>String(r.idRol)===String(payload.idRol));if(selected?.nombre!=='ADMIN')return true;return new Promise(resolve=>{resolver.current=resolve;setConfirm({name:fullName(payload)});confirmed.current=false})}
+ function resolveAdmin(ok){confirmed.current=ok;const resolve=resolver.current;resolver.current=null;setConfirm(null);resolve?.(ok)}
+ async function save(payload){if(form.type==='create'){const data={...payload,idRol:Number(payload.idRol),confirmarAdmin:confirmed.current};confirmed.current=false;return api.post('/usuarios',data)}return api.put(`/usuarios/${form.item.idUsuario}`,payload)}
+ async function done(result){const own=form?.item?.idUsuario===user?.idUsuario;if(own&&result?.data?.correo&&result.data.correo!==form.item.correo){setForm(null);logout();navigate('/login',{replace:true,state:{notice:'Correo actualizado. Inicia sesión con tu nuevo correo.'}});return}setForm(null);setMessage('Datos guardados correctamente.');await load();if(own){try{await refreshProfile()}catch{setError('Los datos se guardaron, pero no se pudo actualizar tu perfil. Vuelve a consultar.')}}return result}
+ const section=(key,label)=>({key,label,section:true,omit:true})
+ const fields=[section('identidad','Identificación'),{key:'nombres',label:'Nombres',maxLength:100},{key:'apellidos',label:'Apellidos',maxLength:100},{key:'tipoDocumento',label:'Tipo de documento',options:[...docs,...(form?.item?.tipoDocumento&&!docs.some(d=>d.value===form.item.tipoDocumento)?[{value:form.item.tipoDocumento,label:form.item.tipoDocumento}]:[])]},{key:'nroDocumento',label:'N.º de documento',maxLength:20},section('contacto','Contacto'),{key:'correo',label:'Correo electrónico',type:'email',maxLength:150},{key:'nroCelular',label:'Celular',required:false,maxLength:20},section('acceso','Acceso'),...(form?.type==='create'?[{key:'idRol',label:'Rol',options:roles.map(r=>({value:r.idRol,label:r.nombre})),notice:values=>roles.find(r=>String(r.idRol)===String(values.idRol))?.nombre==='ADMIN'?'Esta cuenta tendrá permisos administrativos para gestionar VetCare.':null},{key:'contrasena',label:'Contraseña inicial',type:'password',wide:true}]:[{key:'rol',label:'Rol del sistema',omit:true,wide:true,render:()=> <div><Badge role={form?.item?.rol}/><p className="users-help">El rol y la contraseña se conservan. El cambio personal de contraseña está disponible en Mi perfil.</p></div>}])]
+ return <section className="users-page"><div className="vetcare-section-header"><div><h1>Usuarios</h1><p>Consulta y administración de cuentas registradas.</p></div><div className="users-actions"><button className="users-button" disabled={loading} onClick={load}><RefreshCw size={16}/>Actualizar</button><button className="users-button users-primary" disabled={loading||rolesLoading||!!rolesError||!roles.length} aria-describedby={rolesLoading||rolesError?"users-roles-status":undefined} onClick={()=>{setModalError('');setForm({type:'create'})}}><Plus size={17}/>Nuevo usuario</button></div></div><CitaToast message={message} onClose={()=>setMessage('')}/>
+ <div className="users-filters"><label><span>Buscar usuarios</span><div className="users-search"><Search size={18}/><input aria-label="Buscar usuarios" placeholder="Buscar por nombre, correo o documento" value={query} onChange={e=>{setQuery(e.target.value);setPage(1)}}/></div></label><label><span>Rol</span><PrettySelect keyboardNavigation label="Rol" placeholder="Todos los roles" value={role} onChange={v=>{setRole(v);setPage(1)}} options={knownRoles.map(r=>({value:r,label:r}))}/></label></div>
+ {error&&<p className="users-notice" role="alert">{error}<button className="users-button" disabled={loading} onClick={load}>Reintentar</button></p>}{rolesLoading&&<p id="users-roles-status" className="users-role-status" role="status">Cargando roles…</p>}{rolesError&&!rolesLoading&&<div id="users-roles-status" className="users-role-notice" role="alert"><Info size={17}/><p>{rolesError}</p><button className="users-button" onClick={loadRoles}>Reintentar roles</button></div>}{loading&&<p role="status">Cargando usuarios…</p>}
+ <div className="users-table"><table aria-label="Usuarios" aria-busy={loading}><thead><tr>{['Usuario','Tipo de documento','N.º de documento','Rol','Acciones'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{pagination.rows.map(u=><tr key={u.idUsuario}><td><div className="users-identity"><UserAvatar user={u} cache={cache}/><div><strong>{fullName(u)||'Nombre no disponible'}</strong><span>{u.correo}</span></div></div></td><td>{u.tipoDocumento||'No registrado'}</td><td className="users-document">{u.nroDocumento||'No registrado'}</td><td><Badge role={u.rol}/></td><td><div className="users-actions"><button aria-label={`Ver ${fullName(u)}`} className="users-button" disabled={pending} onClick={()=>open('view',u)}><Eye size={15}/>Ver</button><button aria-label={`Editar ${fullName(u)}`} className="users-button users-edit" disabled={pending} onClick={()=>open('edit',u)}><Pencil size={15}/>Editar</button><button aria-label={`Eliminar ${fullName(u)}`} className="users-button users-delete" disabled={pending} onClick={()=>{setModalError('');setForm({type:'delete',item:u})}}><Trash2 size={15}/>Eliminar</button></div></td></tr>)}{!loading&&!pagination.rows.length&&<tr><td colSpan={5}>{error?'No se pudo consultar el listado.':items.length?'No se encontraron coincidencias.':'No existen usuarios registrados.'}</td></tr>}</tbody></table></div>
+ <div className="users-pagination"><p>Mostrando {pagination.start} a {pagination.end} de {visible.length} usuarios</p><div><button className="users-button" aria-label="Página anterior" disabled={pagination.current<=1} onClick={()=>setPage(pagination.current-1)}><ChevronLeft size={17}/></button><span aria-live="polite">{pagination.current} / {pagination.pages}</span><button className="users-button" aria-label="Página siguiente" disabled={pagination.current>=pagination.pages} onClick={()=>setPage(pagination.current+1)}><ChevronRight size={17}/></button></div></div>
+ {form&&form.type!=='create'&&(form.loading||form.failed)?<VetcareModal className="users-modal" busy={form.loading} label="Consultar usuario" onClose={close}><h2>{form.type==='view'?'Detalle de usuario':'Editar usuario'}</h2>{form.loading?<p role="status">Consultando datos de la cuenta…</p>:<><p role="alert" className="users-notice">{modalError}</p><div className="profile-dialog-actions"><button onClick={close}>Cerrar</button><button className="profile-primary" onClick={()=>open(form.type,form.item)}>Reintentar</button></div></>}</VetcareModal>:null}
+ {form?.type==='view'&&!form.loading&&!form.failed&&<VetcareModal label="Detalle de usuario" className="users-modal users-detail" onClose={close}><h2>Detalle de usuario</h2><div className="users-detail-identity"><UserAvatar user={form.item} cache={cache} large/><div><strong>{fullName(form.item)}</strong><Badge role={form.item.rol}/><p>{form.item.correo}</p>{form.item.fechaRegistro&&<small>Fecha de registro: {dateDisplay(form.item.fechaRegistro)}</small>}</div></div><DetailSection title="Información personal" values={[["Nombres",form.item.nombres],["Apellidos",form.item.apellidos],["Tipo de documento",form.item.tipoDocumento],["N.º de documento",form.item.nroDocumento],["Celular",form.item.nroCelular],["Dirección",form.item.direccionContacto]]}/><DetailSection title="Información de la cuenta" values={[["Correo electrónico",form.item.correo],["Rol",form.item.rol]]}/><div className="profile-dialog-actions"><button className="users-button" onClick={close}>Cerrar</button><button className="users-button users-edit" onClick={()=>setForm({...form,type:'edit'})}><Pencil size={16}/>Editar usuario</button></div></VetcareModal>}
+ {(form?.type==='create'||form?.type==='edit'&&!form.loading&&!form.failed)&&<EditorForm validateValues={userFormErrors} fieldErrorsFromResponse={userServerErrors} key={form.type+String(form.item?.idUsuario||'new')} compact variant="users" title={form.type==='create'?'Nuevo usuario':`Editar usuario · ${fullName(form.item)}`} fields={fields} initial={form.item||{tipoDocumento:'DNI',idRol:roles.find(r=>r.nombre==='PROPIETARIO')?.idRol||''}} onSave={save} confirmSubmit={form.type==='create'?confirmAdmin:undefined} onClose={close} onDone={done}><p className="users-help">{form.type==='create'?'Se crea una cuenta. Los perfiles de veterinario y propietario se vinculan en sus módulos correspondientes. La persona podrá cambiar su contraseña desde Mi perfil.':'No se modifican los perfiles asociados ni sus registros clínicos.'}</p></EditorForm>}
+ {confirm&&<VetcareModal className="users-modal" label="Confirmar cuenta ADMIN" onClose={()=>resolveAdmin(false)}><h2>Crear otra cuenta ADMIN</h2><p><strong>{confirm.name}</strong> podrá administrar usuarios, profesionales y las funciones administrativas de VetCare.</p><p>Confirma que la cuenta identifica a la persona responsable y que debe recibir estos privilegios.</p><div className="profile-dialog-actions"><button onClick={()=>resolveAdmin(false)}>Cancelar</button><button className="users-button users-primary" onClick={()=>resolveAdmin(true)}>Confirmar creación de ADMIN</button></div></VetcareModal>}
+ {form?.type==='delete'&&<VetcareModal className="users-modal users-delete-dialog" label="Confirmar eliminación de usuario" busy={pending} onClose={close}><h2>¿Deseas eliminar esta cuenta?</h2><p>Estás a punto de eliminar la cuenta de <strong>{fullName(form.item)}</strong>.</p><div className="users-delete-warning"><AlertCircle size={19}/><p>Eliminar esta cuenta quita su acceso a VetCare. Si tiene un perfil de propietario o veterinario, la eliminación se bloqueará para conservar sus vínculos y la información clínica. No se borran datos clínicos en cascada.</p></div>{form.item.idUsuario===user?.idUsuario&&<p className="users-notice">No puedes eliminar la cuenta con la que iniciaste sesión.</p>}{modalError&&<p role="alert" className="users-notice">{modalError}</p>}<div className="profile-dialog-actions"><button disabled={pending} onClick={close}>Cancelar</button><button className="modal-danger" disabled={pending||form.item.idUsuario===user?.idUsuario} onClick={remove}>{pending?'Comprobando…':'Eliminar cuenta'}</button></div></VetcareModal>}
+ </section>
 }
+function DetailSection({title,values}){return <section className="users-detail-section"><h3>{title}</h3><dl>{values.filter(([,v])=>v!=null&&String(v).trim()!=='').map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}

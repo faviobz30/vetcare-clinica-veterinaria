@@ -31,10 +31,12 @@ public class PropietarioServiceImpl
     private final UsuarioRepository usuarioRepository;
     private final PropietarioMapper propietarioMapper;
     private final UsuarioMapper usuarioMapper;
+    private final pe.edu.utec.vetcare.repository.MascotaRepository mascotas;
 
     @Override
     @Transactional(readOnly = true)
     public List<PropietarioResponse> listar() {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
 
         return propietarioRepository.findAll()
                 .stream()
@@ -62,6 +64,7 @@ public class PropietarioServiceImpl
     public PropietarioResponse crear(
             PropietarioRequest request
     ) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
 
         if (propietarioRepository
                 .existsByUsuarioIdUsuario(
@@ -82,6 +85,9 @@ public class PropietarioServiceImpl
                                 )
                         );
 
+        if (usuario.getRol()==null || !"PROPIETARIO".equals(usuario.getRol().getNombre()))
+            throw new BadRequestException("Selecciona una cuenta de propietario");
+        if (request.getNroCelular()!=null) usuario.setNroCelular(request.getNroCelular());
         PropietarioEntity entity =
                 propietarioMapper.toEntity(request);
 
@@ -94,22 +100,17 @@ public class PropietarioServiceImpl
 
     @Override
     @Transactional
-    public PropietarioResponse actualizar(
-            Long id,
-            PropietarioRequest request
-    ) {
-
-        PropietarioEntity entity =
-                buscarPropietario(id);
-
-        propietarioMapper.updateEntity(
-                request,
-                entity
-        );
-
-        return propietarioMapper.toResponse(
-                propietarioRepository.save(entity)
-        );
+    public PropietarioResponse actualizar(Long id, PropietarioRequest request) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
+        var entity = buscarPropietario(id);
+        if (!entity.getUsuario().getIdUsuario().equals(request.getIdUsuario()))
+            throw new BadRequestException("La cuenta asociada al propietario no se puede cambiar");
+        if (request.getNroCelular()!=null) {
+            entity.getUsuario().setNroCelular(request.getNroCelular());
+            usuarioRepository.save(entity.getUsuario());
+        }
+        propietarioMapper.updateEntity(request, entity);
+        return propietarioMapper.toResponse(propietarioRepository.saveAndFlush(entity));
     }
 
     @Override
@@ -137,7 +138,9 @@ public class PropietarioServiceImpl
     @Override
     @Transactional
     public void eliminar(Long id) {
-
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
+        if (mascotas.existsByPropietarioIdPropietario(id))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"El propietario tiene mascotas y sus registros deben conservarse");
         PropietarioEntity entity =
                 buscarPropietario(id);
 

@@ -1,0 +1,71 @@
+<!doctype html><html lang="es"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QA aislada · Perfil ADMIN</title><style>.capture .qa-tools{display:none}</style><body><div id="root"></div><script type="module">
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+import {MemoryRouter,Routes,Route} from 'react-router-dom'
+import Shell from '/src/components/Shell.jsx'
+import Perfil from '/src/pages/Perfil.jsx'
+import {AuthProvider} from '/src/contexts/AuthContext.jsx'
+import {api} from '/src/lib/api.js'
+import '/src/index.css'
+const h=React.createElement,q=new URLSearchParams(location.search)
+if(q.has('captura'))document.documentElement.classList.add('capture')
+const token=['qa',btoa(JSON.stringify({idUsuario:901,rol:'ADMIN',exp:4102444800})),'qa'].join('.')
+sessionStorage.setItem('vetcare_token',token);sessionStorage.setItem('vetcare_role','ADMIN')
+let profile={idUsuario:901,nombres:'Elena',apellidos:'Herrera',correo:'admin.qa@example.invalid',nroCelular:'999111222',direccionContacto:'Av. Perú 150',tipoDocumento:'DNI',nroDocumento:'12345678',rol:'ADMIN'},photo=null,writes=0,failPatch=false,failRefresh=q.has('error'),failPhoto=false
+const reject=(status,error,config)=>{throw {response:{status,data:{error}},config}}
+api.defaults.adapter=async config=>{
+ const url=config.url,method=config.method,body=typeof config.data==='string'?JSON.parse(config.data):config.data;let data
+ await new Promise(r=>setTimeout(r,q.has('lento')?1200:80))
+ if(method!=='get'){
+  writes++
+  if(url==='/usuarios/me'&&method==='patch'){
+   if(failPatch){failPatch=false;reject(400,'No se guardaron los datos de prueba.',config)}
+   if('nroCelular'in body)profile.nroCelular=body.nroCelular
+   if('direccion'in body)profile.direccionContacto=body.direccion
+   data={...profile}
+  }else if(url==='/usuarios/me/foto'){
+   if(method==='delete')photo=null;else photo=body.get('foto');if(failPhoto==='next-upload')failPhoto=true;data={...profile}
+  }else reject(404,'Escritura prohibida en fixture',config)
+ }else if(url==='/usuarios/me'){
+  if(failRefresh){failRefresh=false;reject(503,'Fallo de consulta de prueba',config)}data={...profile}
+ }else if(url==='/usuarios/me/foto'){
+  if(failPhoto===true){reject(503,'Fallo de verificación',config)}
+  if(!photo)reject(404,'Sin foto',config);data=photo
+ }else reject(404,'Sin API real',config)
+ return {data,status:200,statusText:'OK',config,headers:{}}
+}
+const wait=async pred=>{for(let i=0;i<300;i++){if(pred())return;await new Promise(r=>setTimeout(r,20))}throw Error('Tiempo agotado')}
+const btn=(name,scope=document)=>[...scope.querySelectorAll('button')].find(n=>n.textContent.trim()===name)
+const field=name=>document.querySelector(`input[aria-label="${name}"]`)
+function fill(node,value){Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}))}
+const tick=()=>new Promise(r=>setTimeout(r,0))
+async function run(){const results=[];const check=(ok,name)=>{if(!ok)throw Error(name);results.push(name)};try{
+ await wait(()=>document.querySelector('.profile-identity'))
+ check(document.querySelector('.profile-identity h2').textContent==='Elena Herrera','Identidad real del adaptador')
+ check(document.querySelectorAll('.profile-field').length===5,'Celular único y documento separado')
+ check(!field('Celular'),'Lectura sin inputs editables')
+ check([...document.querySelectorAll('strong')].filter(n=>n.textContent==='Elena Herrera').length===1,'Encabezado dinámico')
+ check(document.querySelector('aside').textContent.includes('Elena Herrera'),'Sidebar dinámico')
+ btn('Editar información').click();await tick();fill(field('Celular'),'912345678');await tick();let before=writes;btn('Cancelar').click();await tick()
+ check(writes===before&&profile.nroCelular==='999111222','Cancelar sin escritura')
+ btn('Editar información').click();await tick();check(field('Celular').value==='999111222','Cancelar conserva original');btn('Guardar').click();await tick();check(writes===before,'Sin cambios no hace PATCH')
+ btn('Editar información').click();await tick();fill(field('Celular'),'782912');await tick();btn('Guardar').click();await tick();check(!!document.getElementById('admin-phone-error')&&writes===before,'Móvil inválido bloqueado')
+ fill(field('Celular'),'912345678');await tick();check(!document.getElementById('admin-phone-error'),'Error se limpia al corregir');fill(field('Dirección'),'Calle sintética 200');await tick();btn('Guardar').click();btn('Guardar').click();await wait(()=>document.querySelector('[role=status]')?.textContent.includes('guardados'))
+ check(writes===before+1,'Un PATCH frente a doble clic');check(profile.nroCelular==='912345678'&&profile.direccionContacto==='Calle sintética 200','Contacto guardado');check(!field('Celular'),'Retorno a lectura')
+ btn('Editar información').click();await tick();fill(field('Dirección'),'No guardar');await tick();failPatch=true;btn('Guardar').click();await wait(()=>document.querySelector('[role=alert]'));check(profile.direccionContacto==='Calle sintética 200'&&field('Dirección').value==='No guardar','PATCH fallido conserva borrador');btn('Cancelar').click();await tick();check(!document.querySelector('[role=alert]'),'Cancelar limpia error')
+ btn('Editar información').click();await tick();fill(field('Dirección'),'Guardado con consulta fallida');await tick();failRefresh=true;btn('Guardar').click();await wait(()=>document.querySelector('[role=alert]')?.textContent.includes('se guardaron'))
+ check(profile.direccionContacto==='Guardado con consulta fallida','Fallo de consulta no revierte guardado');check(document.querySelector('.profile-form-grid').textContent.includes('Guardado con consulta fallida'),'Vista conserva respuesta PATCH');btn('Reintentar consulta').click();await wait(()=>!document.querySelector('[role=alert]')&&!btn('Cambiar foto').disabled)
+ const canvas=document.createElement('canvas');canvas.width=40;canvas.height=40;canvas.getContext('2d').fillRect(0,0,40,40);const blob=await new Promise(r=>canvas.toBlob(r,'image/png'));const file=new File([blob],'qa.png',{type:'image/png'}),input=document.querySelector('.profile-identity input[type=file]')
+ function choose(){const dt=new DataTransfer();dt.items.add(file);input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}))}
+ before=writes;choose();await wait(()=>document.querySelector('dialog[open]'));check(writes===before,'Vista previa sin subir');btn('Cancelar',document.querySelector('dialog')).click();await tick();check(writes===before,'Cancelar foto sin escritura')
+ choose();await wait(()=>document.querySelector('dialog[open]'));btn('Guardar foto',document.querySelector('dialog')).click();await wait(()=>!document.querySelector('dialog'));await wait(()=>document.querySelector('.profile-avatar img'));check(writes===before+1&&!!photo,'Foto confirmada una vez');check(!!document.querySelector('img[alt="Fotografía de perfil"]'),'Avatar del encabezado sincronizado');check(document.querySelector('[role=status]').textContent.includes('comprobada'),'Éxito después de GET verificado')
+ btn('Quitar foto').click();await wait(()=>document.querySelector('dialog[open]'));btn('Cancelar',document.querySelector('dialog')).click();await tick();check(!!photo,'Cancelar eliminación conserva foto');btn('Quitar foto').click();await wait(()=>document.querySelector('dialog[open]'));btn('Quitar foto',document.querySelector('dialog')).click();await wait(()=>!document.querySelector('dialog'));await wait(()=>!document.querySelector('.profile-avatar img'));check(!photo,'Eliminación comprobada con 404')
+ choose();await wait(()=>document.querySelector('dialog[open]'));failPhoto='next-upload';btn('Guardar foto',document.querySelector('dialog')).click();await wait(()=>document.querySelector('dialog [role=alert]'));check(!document.querySelector('[role=status]'),'Verificación fallida no anuncia éxito');failPhoto=false;btn('Cancelar',document.querySelector('dialog')).click();await tick()
+ document.querySelector('button[aria-label="Opciones de perfil"]').click();await tick();const headerInput=document.querySelector('header input[type=file]');const transfer=new DataTransfer();transfer.items.add(file);before=writes;headerInput.files=transfer.files;headerInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('dialog[open]'));check(writes===before,'Encabezado también requiere vista previa');btn('Cancelar',document.querySelector('dialog')).click();await tick();check(writes===before,'Cancelar foto de encabezado sin escritura');
+ document.querySelector('button[aria-label="Opciones de perfil"]').click();await tick();const newHeaderInput=document.querySelector('header input[type=file]');const transfer2=new DataTransfer();transfer2.items.add(file);newHeaderInput.files=transfer2.files;newHeaderInput.dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>document.querySelector('dialog[open]'));btn('Guardar foto',document.querySelector('dialog')).click();await wait(()=>!document.querySelector('dialog'));await wait(()=>document.querySelector('img[alt="Fotografía de perfil"]'));check(writes===before+1,'Encabezado sube y verifica una sola vez');document.querySelector('button[aria-label="Opciones de perfil"]').click();await tick();
+ check(document.documentElement.scrollWidth<=innerWidth,'Sin desbordamiento horizontal')
+ document.getElementById('qa-result').textContent=results.length+' verificaciones correctas · '+results.join(' · ')
+ }catch(err){document.getElementById('qa-result').textContent='FALLO: '+err.message+' · '+results.join(' · ')}}
+createRoot(document.getElementById('root')).render(h(AuthProvider,null,h(MemoryRouter,{initialEntries:['/panel/perfil']},h('div',null,h('div',{className:'qa-tools'},h('p',null,'QA AISLADA · Datos sintéticos · Sin API ni PostgreSQL'),h('button',{onClick:run},'Comprobar perfil ADMIN'),h('output',{id:'qa-result'})),h(Routes,null,h(Route,{element:h(Shell)},h(Route,{path:'/panel/perfil',element:h(Perfil)})))))))
+if(q.has('auto'))wait(()=>document.querySelector('.profile-identity')).then(run)
+</script></body></html>

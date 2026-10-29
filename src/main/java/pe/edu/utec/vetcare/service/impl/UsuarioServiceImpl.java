@@ -27,11 +27,14 @@ public class UsuarioServiceImpl
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
+    private final pe.edu.utec.vetcare.repository.PropietarioRepository propietarios;
+    private final pe.edu.utec.vetcare.repository.VeterinarioRepository veterinarios;
 
     @Override
     @Transactional(readOnly = true)
     public List<UsuarioResponse> listar() {
 
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
         return usuarioRepository.findAll()
                 .stream()
                 .map(usuarioMapper::toResponse)
@@ -41,15 +44,19 @@ public class UsuarioServiceImpl
     @Override
     @Transactional(readOnly = true)
     public UsuarioResponse obtener(Long id) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
 
-        return usuarioMapper.toResponse(
-                buscarUsuario(id)
-        );
+        var entity = buscarUsuario(id);
+        var response = usuarioMapper.toResponse(entity);
+        if (entity.getRol()!=null && "PROPIETARIO".equals(entity.getRol().getNombre()))
+            propietarios.findByUsuarioIdUsuario(id).ifPresent(p -> response.setDireccionContacto(p.getDireccion()));
+        return response;
     }
 
     @Override
     @Transactional
     public UsuarioResponse crear(UsuarioRequest request) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
 
         pe.edu.utec.vetcare.validation.PoliticaContrasena.validar(request.getContrasena());
         if (usuarioRepository.existsByCorreo(request.getCorreo())) {
@@ -64,6 +71,8 @@ public class UsuarioServiceImpl
                 .findById(request.getIdRol())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
 
+        if (!java.util.List.of("ADMIN","VETERINARIO","PROPIETARIO").contains(rol.getNombre())) throw new BadRequestException("Selecciona un rol válido");
+        if ("ADMIN".equals(rol.getNombre()) && !Boolean.TRUE.equals(request.getConfirmarAdmin())) throw new BadRequestException("Confirma los privilegios de la nueva cuenta ADMIN antes de crearla");
         UsuarioEntity entity = usuarioMapper.toEntity(request);
 
         entity.setRol(rol);
@@ -76,7 +85,9 @@ public class UsuarioServiceImpl
     @Override
     @Transactional
     public UsuarioResponse actualizar(Long id, ActualizarUsuarioRequest request) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
         UsuarioEntity entity = buscarUsuario(id);
+        if (request.getIdRol()!=null && !request.getIdRol().equals(entity.getRol().getIdRol())) throw new BadRequestException("El rol no se modifica desde Editar usuario; conserva las vinculaciones existentes");
 
         if (usuarioRepository.existsByCorreoAndIdUsuarioNot(request.getCorreo(), id)) {
             throw new BadRequestException("El correo ya se encuentra registrado");
@@ -93,6 +104,9 @@ public class UsuarioServiceImpl
     @Override
     @Transactional
     public void eliminar(Long id) {
+        pe.edu.utec.vetcare.security.AccesoClinico.soloAdmin();
+        // Serializa las eliminaciones para comprobar el último ADMIN sin migraciones.
+        rolRepository.bloquearAdministracion().orElseThrow(() -> new ResourceNotFoundException("Rol ADMIN no encontrado"));
 
         UsuarioEntity entity = buscarUsuario(id);
 
@@ -102,6 +116,10 @@ public class UsuarioServiceImpl
             if (actual instanceof Number idActual && entity.getIdUsuario().equals(idActual.longValue()))
                 throw new BadRequestException("No puedes eliminar la cuenta con la que iniciaste sesión");
         }
+        if ("ADMIN".equals(entity.getRol().getNombre()) && usuarioRepository.countByRol_Nombre("ADMIN")<=1)
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"No se puede eliminar al último administrador");
+        if (veterinarios.existsByUsuario_IdUsuario(id) || propietarios.findByUsuarioIdUsuario(id).isPresent())
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,"La cuenta tiene un perfil asociado que debe conservarse");
         usuarioRepository.delete(entity);
     }
 

@@ -7,6 +7,7 @@ import lombok.Data;
 
 @Data
 public class ActualizarUsuarioRequest {
+    private Long idRol;
     @NotBlank(message = "Los nombres son obligatorios")
     @Size(max = 100)
     private String nombres;

@@ -27,11 +27,13 @@ public class VeterinarioController {
 
     private final VeterinarioService veterinarioService;
     private final Validator validator;
+    private final pe.edu.utec.vetcare.service.FotoPerfilService fotos;
 
     public VeterinarioController(VeterinarioService veterinarioService,
-                                 Validator validator) {
+                                 Validator validator, pe.edu.utec.vetcare.service.FotoPerfilService fotos) {
         this.veterinarioService = veterinarioService;
         this.validator = validator;
+        this.fotos = fotos;
     }
 
     @GetMapping
@@ -79,6 +81,16 @@ public class VeterinarioController {
             throw new BadRequestException("El campo " + nombre + " debe ser texto");
         }
         return texto;
+    }
+
+    // La lectura solo resuelve perfiles veterinarios, nunca IDs arbitrarios de usuarios.
+    @GetMapping("/{id}/foto")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<byte[]> fotografia(@PathVariable Long id) {
+        var perfil = veterinarioService.getById(id);
+        var foto = fotos.leer(perfil.getIdUsuario());
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .contentType(foto.tipo()).body(foto.contenido());
     }
 
     @GetMapping("/{id}")
